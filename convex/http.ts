@@ -342,14 +342,53 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     try {
       const body = await request.json();
+      const { token, token_type_hint, client_id, client_secret } = body;
 
-      const result = await ctx.runQuery(api.oauth.introspectToken, body);
+      // Validate client credentials if provided
+      if (client_id && client_secret) {
+        const client = await ctx.runQuery(api.oauth.getClient, { client_id });
+        if (!client) {
+          return new Response(
+            JSON.stringify({
+              active: false,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        const clientSecretValid = await ctx.runAction(internal.actions.cryptoActions.verifySecretAction, {
+          secret: client_secret,
+          hash: client.client_secret_hash,
+        });
+
+        if (!clientSecretValid) {
+          return new Response(
+            JSON.stringify({
+              active: false,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+      }
+
+      const result = await ctx.runQuery(api.oauth.introspectToken, {
+        token,
+        token_type_hint,
+        client_id: client_id || "",
+      });
 
       return new Response(JSON.stringify(result), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
+      console.error("Introspection error:", error);
       return new Response(
         JSON.stringify({
           error: "server_error",
