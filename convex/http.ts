@@ -155,14 +155,14 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     try {
       const body = await request.json();
+      const { grant_type, code, code_verifier, redirect_uri, client_id, client_secret } = body;
 
-      const result = await ctx.runMutation(api.oauth.handleTokenRequest, body);
-
-      if (!result.success) {
+      // Validate grant type
+      if (grant_type !== "authorization_code") {
         return new Response(
           JSON.stringify({
-            error: result.error,
-            error_description: result.error_description,
+            error: "unsupported_grant_type",
+            error_description: "Only authorization_code grant is supported",
           }),
           {
             status: 400,
@@ -171,11 +171,151 @@ http.route({
         );
       }
 
-      return new Response(JSON.stringify(result.data), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
+      // Validate required parameters
+      if (!code || !code_verifier || !redirect_uri || !client_id || !client_secret) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "Missing required parameters",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Verify client credentials
+      const client = await ctx.runQuery(api.oauth.getClient, { client_id });
+      if (!client) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_client",
+            error_description: "Client not found",
+          }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const clientSecretValid = await ctx.runAction(internal.actions.cryptoActions.verifySecretAction, {
+        secret: client_secret,
+        hash: client.client_secret_hash,
       });
+
+      if (!clientSecretValid) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_client",
+            error_description: "Invalid client credentials",
+          }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Get authorization code
+      const authCode = await ctx.runQuery(api.oauth.getAuthCode, { code });
+      if (!authCode) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_grant",
+            error_description: "Invalid or expired authorization code",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Verify PKCE
+      const pkceValid = await ctx.runAction(internal.actions.cryptoActions.validatePKCEAction, {
+        code_verifier,
+        code_challenge: authCode.code_challenge,
+      });
+
+      if (!pkceValid) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_grant",
+            error_description: "Invalid code_verifier",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Verify redirect_uri matches
+      if (authCode.redirect_uri !== redirect_uri) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_grant",
+            error_description: "redirect_uri mismatch",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Generate tokens
+      const tokenId = `tok_${await ctx.runAction(internal.actions.cryptoActions.generateSecureRandomAction, { bytes: 16 })}`;
+      const refreshTokenValue = `rt_${await ctx.runAction(internal.actions.cryptoActions.generateSecureRandomAction, { bytes: 32 })}`;
+
+      const accessTokenExpiresAt = Date.now() + (3600 * 1000); // 1 hour
+      const refreshTokenExpiresAt = Date.now() + (30 * 24 * 3600 * 1000); // 30 days
+
+      const accessToken = await ctx.runAction(internal.actions.cryptoActions.generateJWTAction, {
+        payload: {
+          sub: authCode.agent_id,
+          client_id: authCode.client_id,
+          model: authCode.model,
+          scope: authCode.scope,
+          token_id: tokenId,
+        },
+        expiresIn: 3600,
+      });
+
+      // Store tokens
+      await ctx.runMutation(api.oauth.handleTokenRequest, {
+        grant_type: "authorization_code",
+        token_id: tokenId,
+        access_token: accessToken,
+        refresh_token: refreshTokenValue,
+        agent_id: authCode.agent_id,
+        client_id: authCode.client_id,
+        model: authCode.model,
+        scope: authCode.scope,
+        access_token_expires_at: accessTokenExpiresAt,
+        refresh_token_expires_at: refreshTokenExpiresAt,
+      });
+
+      // Mark auth code as used
+      await ctx.runMutation(api.oauth.markAuthCodeUsed, { code });
+
+      return new Response(
+        JSON.stringify({
+          access_token: accessToken,
+          token_type: "Bearer",
+          expires_in: 3600,
+          refresh_token: refreshTokenValue,
+          scope: authCode.scope,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     } catch (error) {
+      console.error("Token exchange error:", error);
       return new Response(
         JSON.stringify({
           error: "server_error",

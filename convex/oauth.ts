@@ -510,3 +510,60 @@ export const handleTokenRequest = mutation({
     return { success: true };
   },
 });
+
+/**
+ * Get authorization code details
+ */
+export const getAuthCode = query({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    // Find the auth_request with this code
+    const authRequest = await ctx.db
+      .query("auth_requests")
+      .filter((q) => q.eq(q.field("code"), args.code))
+      .first();
+
+    if (!authRequest) {
+      return null;
+    }
+
+    // Check if code is expired (codes expire after 10 minutes)
+    if (authRequest.created_at + (10 * 60 * 1000) < Date.now()) {
+      return null;
+    }
+
+    // Check if already used
+    if (authRequest.code_used) {
+      return null;
+    }
+
+    return {
+      code: authRequest.code,
+      agent_id: authRequest.agent_id!,
+      client_id: authRequest.client_id,
+      redirect_uri: authRequest.redirect_uri,
+      code_challenge: authRequest.code_challenge,
+      scope: authRequest.scope,
+      model: authRequest.model!,
+    };
+  },
+});
+
+/**
+ * Mark authorization code as used
+ */
+export const markAuthCodeUsed = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    const authRequest = await ctx.db
+      .query("auth_requests")
+      .filter((q) => q.eq(q.field("code"), args.code))
+      .first();
+
+    if (authRequest) {
+      await ctx.db.patch(authRequest._id, {
+        code_used: true,
+      });
+    }
+  },
+});
