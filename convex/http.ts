@@ -263,12 +263,70 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     try {
       const body = await request.json();
+      const { request_id, agent_id, agent_secret, model } = body;
 
-      const result = await ctx.runMutation(api.oauth.authenticateAgent, body);
+      // Validate required fields
+      if (!request_id || !agent_id || !agent_secret || !model) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "invalid_request",
+            error_description: "Missing required fields: request_id, agent_id, agent_secret, model",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Get agent from database
+      const agent = await ctx.runQuery(api.oauth.getAgent, { agent_id });
+
+      if (!agent) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "invalid_agent",
+            error_description: "Agent not found",
+          }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Verify agent secret using crypto action
+      const secretValid = await ctx.runAction(internal.actions.cryptoActions.verifySecretAction, {
+        secret: agent_secret,
+        hash: agent.agent_secret_hash,
+      });
+
+      if (!secretValid) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "invalid_credentials",
+            error_description: "Invalid agent credentials",
+          }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Authenticate the agent
+      const result = await ctx.runMutation(api.oauth.authenticateAgent, {
+        request_id,
+        agent_id,
+        model,
+      });
 
       if (!result.success) {
         return new Response(JSON.stringify(result), {
-          status: result.status || 400,
+          status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
@@ -278,6 +336,7 @@ http.route({
         headers: { "Content-Type": "application/json" },
       });
     } catch (error) {
+      console.error("Agent authentication error:", error);
       return new Response(
         JSON.stringify({
           success: false,
