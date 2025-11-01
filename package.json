@@ -21,6 +21,8 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.9.2",
     "bcryptjs": "^3.0.2",
+    "convex": "^1.28.0",
+    "dotenv": "^17.2.3",
     "hono": "^4.10.4",
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.1.6",
