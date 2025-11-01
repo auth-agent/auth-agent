@@ -10,7 +10,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Convex](https://img.shields.io/badge/Convex-Serverless-6B46C1)](https://convex.dev)
 
-A specialized OAuth 2.1 authorization server designed for autonomous AI agents. Unlike traditional OAuth flows that require human interaction, Auth Agent enables AI agents to authenticate themselves programmatically while maintaining enterprise-grade security through PKCE and credential verification.
+A specialized OAuth 2.1 authorization server designed for autonomous AI agents. Unlike traditional OAuth flows that require human interaction, Auth Agent enables AI agents to authenticate themselves programmatically through PKCE and credential verification.
 
 </div>
 
