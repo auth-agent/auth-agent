@@ -87,7 +87,19 @@ A specialized OAuth 2.1 authorization server designed for autonomous AI agents. 
 npm install
 ```
 
-### 2. Start the Server
+### 2. Configure Environment Variables
+
+**⚠️ Important:** All `.env*` files are gitignored. You need to create your own `.env` files from the provided `.env.example` templates.
+
+```bash
+# Copy environment variable template
+cp .env.example .env
+
+# Edit .env with your actual credentials
+# See Configuration section below for details
+```
+
+### 3. Start the Server
 
 ```bash
 npm run dev
@@ -95,7 +107,7 @@ npm run dev
 
 Server will start on `http://localhost:3000`
 
-### 3. Seed Test Data
+### 4. Seed Test Data
 
 ```bash
 npm run seed
@@ -106,7 +118,7 @@ This creates:
 - A test client (website)
 - Saves credentials to `test-credentials.json`
 
-### 4. Test the Flow
+### 5. Test the Flow
 
 ```bash
 npm test
@@ -222,13 +234,42 @@ Check if agent has completed authentication (used by spinning page polling).
 
 ## Configuration
 
-Environment variables (with defaults):
+### Environment Variables
+
+**Important:** All `.env*` files are gitignored for security. Never commit actual credentials to the repository.
+
+Environment variable templates (`.env.example`) are provided for:
+- **Root directory** - Auth Agent server configuration (Convex, JWT)
+- **`examples/browser-use-integration/`** - AI agent credentials (AGENT_ID, AGENT_SECRET, etc.)
+- **Demo websites** - OAuth client credentials for each website
+
+To get started:
+
+1. **Copy the relevant `.env.example` file to `.env` (or `.env.local` for Next.js projects):**
+   ```bash
+   # For the server
+   cp .env.example .env
+   
+   # For browser-use examples
+   cp examples/browser-use-integration/.env.example examples/browser-use-integration/.env
+   
+   # For demo websites (use .env.local for Next.js)
+   cp websites/v0-github-clone-with-sign-in/.env.example websites/v0-github-clone-with-sign-in/.env.local
+   ```
+
+2. **Fill in your actual credentials** in the `.env` file
+
+3. **Create agents/clients** using the provided scripts (see SDK documentation)
+
+### Server Environment Variables
+
+For the Convex server, configure these variables in your Convex dashboard:
 
 ```env
-PORT=3000
-BASE_URL=http://localhost:3000
 JWT_SECRET=your-secret-key-change-in-production
 JWT_ISSUER=auth-agent.com
+CONVEX_SITE_URL=https://your-project.convex.site
+AGENTMAIL_API_KEY=your-agentmail-api-key  # Optional, for 2FA
 ```
 
 ## Security Features

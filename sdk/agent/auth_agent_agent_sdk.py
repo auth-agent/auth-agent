@@ -268,7 +268,66 @@ class AuthAgentAgentSDK:
                     return {
                         'success': True,
                         'message': data.get('message', 'Agent authenticated successfully'),
+                        'requires_2fa': data.get('requires_2fa', False),
+                        'expires_in': data.get('expires_in'),
                         'data': data,  # Include full response for debugging
+                    }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': 'network_error',
+                'error_description': str(e),
+            }
+
+    async def verify_2fa_async(self, request_id: str, code: str, authorization_url: str) -> Dict[str, Any]:
+        """
+        Verify 2FA code with Auth Agent server (async version).
+
+        Args:
+            request_id: Request ID from the initial authentication
+            code: 6-digit verification code from email
+            authorization_url: Authorization URL (used to extract server URL)
+
+        Returns:
+            Verification result dictionary with 'success', 'message', 'error', etc.
+
+        Raises:
+            RuntimeError: If aiohttp is not installed
+        """
+        if not ASYNC_AVAILABLE:
+            raise RuntimeError("aiohttp is required for async methods. Install with: pip install aiohttp")
+
+        auth_server_url = self._get_auth_server_url(authorization_url)
+        url = f"{auth_server_url}/api/agent/verify-2fa"
+
+        payload = {
+            'request_id': request_id,
+            'code': code,
+            'model': self.model,
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload) as response:
+                    data = await response.json()
+
+                    # Log for debugging
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f'[SDK] POST {url} - Status: {response.status}')
+                    logger.info(f'[SDK] 2FA Verification Response: {data}')
+
+                    if not response.ok:
+                        return {
+                            'success': False,
+                            'error': data.get('error', 'verification_failed'),
+                            'error_description': data.get('error_description', f'HTTP {response.status}'),
+                        }
+
+                    return {
+                        'success': True,
+                        'message': data.get('message', '2FA verification successful'),
+                        'data': data,
                     }
         except Exception as e:
             return {

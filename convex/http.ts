@@ -528,7 +528,62 @@ http.route({
         );
       }
 
-      // Authenticate the agent
+      // Check if 2FA is enabled for this agent
+      if (agent.two_factor_enabled && agent.agentmail_inbox_id) {
+        // Get AgentMail API key from environment
+        const agentmailApiKey = process.env.AGENTMAIL_API_KEY;
+
+        if (!agentmailApiKey) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "server_error",
+              error_description: "AgentMail API key not configured",
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        // Generate and send 2FA code
+        try {
+          const codeResult = await ctx.runAction(api.twoFactor.generateAndSendCode, {
+            agent_id,
+            request_id,
+            agentmail_api_key: agentmailApiKey,
+          });
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              requires_2fa: true,
+              message: "Verification code sent to agent inbox",
+              expires_in: codeResult.expires_in,
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        } catch (error: any) {
+          console.error("Failed to send 2FA code:", error);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "2fa_error",
+              error_description: error.message || "Failed to send verification code",
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+      }
+
+      // No 2FA required - authenticate directly
       const result = await ctx.runMutation(api.oauth.authenticateAgent, {
         request_id,
         agent_id,
@@ -548,6 +603,88 @@ http.route({
       });
     } catch (error) {
       console.error("Agent authentication error:", error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "server_error",
+          error_description: "Internal server error",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  }),
+});
+
+/**
+ * POST /api/agent/verify-2fa
+ * Verify 2FA code and complete authentication
+ */
+http.route({
+  path: "/api/agent/verify-2fa",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { request_id, code, model } = body;
+
+      // Validate required fields
+      if (!request_id || !code || !model) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "invalid_request",
+            error_description: "Missing required fields: request_id, code, model",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Verify the 2FA code
+      const verifyResult = await ctx.runMutation(api.twoFactor.verifyCode, {
+        code,
+        request_id,
+      });
+
+      if (!verifyResult.valid) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "invalid_code",
+            error_description: verifyResult.error || "Invalid verification code",
+          }),
+          {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Code is valid - complete authentication
+      const result = await ctx.runMutation(api.oauth.authenticateAgent, {
+        request_id,
+        agent_id: verifyResult.agent_id,
+        model,
+      });
+
+      if (!result.success) {
+        return new Response(JSON.stringify(result), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("2FA verification error:", error);
       return new Response(
         JSON.stringify({
           success: false,
@@ -673,7 +810,7 @@ http.route({
   handler: httpAction(async (ctx, request) => {
     try {
       const body = await request.json();
-      const { user_email, user_name, agent_id } = body;
+      const { user_email, user_name, agent_id, enable_2fa } = body;
 
       // Generate secret
       const agentSecret = await ctx.runAction(internal.actions.cryptoActions.generateSecureRandomAction, { bytes: 32 });
@@ -696,14 +833,48 @@ http.route({
         });
       }
 
-      return new Response(JSON.stringify({
+      const responseData: any = {
         agent_id: result.agent_id,
         agent_secret: agentSecret,
         user_email,
         user_name,
         created_at: Date.now(),
+        two_factor_enabled: false,
         warning: "Save the agent_secret securely. It will not be shown again.",
-      }), {
+      };
+
+      // Enable 2FA if requested
+      if (enable_2fa === true) {
+        const agentmailApiKey = process.env.AGENTMAIL_API_KEY;
+
+        if (!agentmailApiKey) {
+          return new Response(
+            JSON.stringify({
+              error: "server_error",
+              error_description: "AgentMail API key not configured. Cannot enable 2FA.",
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        try {
+          const twoFactorResult = await ctx.runAction(api.twoFactor.enableTwoFactor, {
+            agent_id: result.agent_id,
+            agentmail_api_key: agentmailApiKey,
+          });
+
+          responseData.two_factor_enabled = true;
+          responseData.agentmail_inbox = twoFactorResult.inbox_email;
+        } catch (error: any) {
+          console.error("Failed to enable 2FA during agent creation:", error);
+          responseData.two_factor_error = "Failed to enable 2FA. You can enable it later using the enable-2fa endpoint.";
+        }
+      }
+
+      return new Response(JSON.stringify(responseData), {
         status: 201,
         headers: { "Content-Type": "application/json" },
       });
@@ -866,6 +1037,171 @@ http.route({
         JSON.stringify({
           error: "server_error",
           error_description: "Internal server error",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  }),
+});
+
+/**
+ * POST /api/admin/agents/enable-2fa
+ * Enable 2FA for an agent
+ */
+http.route({
+  path: "/api/admin/agents/enable-2fa",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { agent_id } = body;
+
+      if (!agent_id) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "Missing agent_id",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Get AgentMail API key from environment
+      const agentmailApiKey = process.env.AGENTMAIL_API_KEY;
+
+      if (!agentmailApiKey) {
+        return new Response(
+          JSON.stringify({
+            error: "server_error",
+            error_description: "AgentMail API key not configured. Please set AGENTMAIL_API_KEY environment variable.",
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Enable 2FA
+      const result = await ctx.runAction(api.twoFactor.enableTwoFactor, {
+        agent_id,
+        agentmail_api_key: agentmailApiKey,
+      });
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      console.error("Enable 2FA error:", error);
+      return new Response(
+        JSON.stringify({
+          error: "server_error",
+          error_description: error.message || "Internal server error",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  }),
+});
+
+/**
+ * POST /api/admin/agents/disable-2fa
+ * Disable 2FA for an agent
+ */
+http.route({
+  path: "/api/admin/agents/disable-2fa",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { agent_id } = body;
+
+      if (!agent_id) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "Missing agent_id",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const result = await ctx.runMutation(api.twoFactor.disableTwoFactor, {
+        agent_id,
+      });
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      console.error("Disable 2FA error:", error);
+      return new Response(
+        JSON.stringify({
+          error: "server_error",
+          error_description: error.message || "Internal server error",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  }),
+});
+
+/**
+ * GET /api/admin/agents/2fa-status
+ * Check 2FA status for an agent
+ */
+http.route({
+  path: "/api/admin/agents/2fa-status",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const url = new URL(request.url);
+      const agent_id = url.searchParams.get("agent_id");
+
+      if (!agent_id) {
+        return new Response(
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "Missing agent_id parameter",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const result = await ctx.runQuery(api.twoFactor.isTwoFactorEnabled, {
+        agent_id,
+      });
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      console.error("Check 2FA status error:", error);
+      return new Response(
+        JSON.stringify({
+          error: "server_error",
+          error_description: error.message || "Internal server error",
         }),
         {
           status: 500,

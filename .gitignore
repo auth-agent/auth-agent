@@ -4,10 +4,9 @@ node_modules/
 # Build output
 dist/
 
-# Environment variables
-.env
-.env.local
-.env.production
+# Environment variables (all .env* files are ignored)
+.env*
+!.env.example
 
 # Test credentials (contains secrets!)
 test-credentials.json

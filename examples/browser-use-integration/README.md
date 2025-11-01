@@ -12,16 +12,27 @@ pip install browser-use python-dotenv aiohttp
 
 ### 2. Set Up Environment Variables
 
-Create a `.env` file:
+**⚠️ Important:** All `.env*` files are gitignored. Copy the example template:
 
 ```bash
-BROWSER_USE_API_KEY=your_browser_use_api_key
-AGENT_ID=agent_xxx
-AGENT_SECRET=secret_xxx
-AGENT_MODEL=gpt-4  # optional
+# Copy the environment variable template
+cp .env.example .env
 ```
 
-Or export them:
+Then edit `.env` with your actual credentials:
+
+```bash
+AGENT_ID=agent_xxx
+AGENT_SECRET=secret_xxx
+AGENT_MODEL=browser-use  # or gpt-4, claude, etc.
+BROWSER_USE_API_KEY=your_browser_use_api_key  # Required for ChatBrowserUse
+```
+
+**Getting credentials:**
+- Create an agent: `python3 create_new_agent.py` or use `scripts/create-agent-credentials.js`
+- Get Browser-Use API key: https://cloud.browser-use.com/new-api-key
+
+Alternatively, you can export environment variables:
 
 ```bash
 export BROWSER_USE_API_KEY=your_key

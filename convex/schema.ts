@@ -6,8 +6,10 @@ export default defineSchema({
   agents: defineTable({
     agent_id: v.string(),
     agent_secret_hash: v.string(),
-    user_email: v.string(),
-    user_name: v.string(),
+    user_email: v.string(), // Human owner's email for audit trail
+    user_name: v.string(),  // Human owner's name for identification
+    agentmail_inbox_id: v.optional(v.string()), // Optional AgentMail inbox for 2FA
+    two_factor_enabled: v.optional(v.boolean()), // Optional 2FA flag
     created_at: v.number(),
   }).index("by_agent_id", ["agent_id"]),
 
@@ -74,4 +76,17 @@ export default defineSchema({
     expires_at: v.number(),
     revoked: v.boolean(),
   }).index("by_refresh_token", ["refresh_token"]),
+
+  // 2FA Verification Codes
+  verification_codes: defineTable({
+    code: v.string(),
+    agent_id: v.string(),
+    request_id: v.string(),
+    expires_at: v.number(),
+    used: v.optional(v.boolean()),
+    created_at: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_agent_id", ["agent_id"])
+    .index("by_request_id", ["request_id"]),
 });

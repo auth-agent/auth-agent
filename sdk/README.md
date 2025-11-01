@@ -16,6 +16,14 @@ Complete integration SDKs for Auth Agent OAuth 2.1 authentication.
 **Copy this file to your project:**
 - `sdk/server/auth-agent-server-sdk.ts`
 
+### AI Agent SDK (For Agents to Authenticate)
+
+**Copy these files to your project:**
+- `sdk/agent/auth-agent-agent-sdk.ts` - TypeScript SDK
+- `sdk/agent/auth_agent_agent_sdk.py` - Python SDK
+
+See [Agent SDK Documentation](./agent/README.md) for details.
+
 ---
 
 ## Quick Start
@@ -469,3 +477,33 @@ Before deploying to production:
 2. Deploy Auth Agent server
 3. Configure your environment variables
 4. Test with AI agents!
+
+---
+
+## AI Agent Integration
+
+If you're building an AI agent that needs to authenticate with Auth Agent, use the **AI Agent SDK**:
+
+- **TypeScript/JavaScript**: See [`sdk/agent/README.md`](./agent/README.md)
+- **Python**: See [`sdk/agent/README.md`](./agent/README.md)
+
+The agent SDK helps agents:
+- Extract `request_id` from authorization pages
+- Authenticate with the Auth Agent server
+- Poll for authentication completion
+
+Example:
+```typescript
+import { AuthAgentAgentSDK } from './sdk/agent/auth-agent-agent-sdk';
+
+const sdk = new AuthAgentAgentSDK({
+  agentId: 'agent_xxx',
+  agentSecret: 'secret_xxx',
+  model: 'gpt-4',
+});
+
+const status = await sdk.completeAuthenticationFlow(authorizationUrl);
+console.log('Authorization code:', status.code);
+```
+
+**Note:** The SDK automatically extracts the auth server URL from the authorization URL, so you don't need to provide it separately.
