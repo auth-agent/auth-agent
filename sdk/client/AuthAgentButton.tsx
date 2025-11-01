@@ -71,17 +71,17 @@ export const AuthAgentButton: React.FC<AuthAgentButtonProps> = ({
   const defaultStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '10px',
     padding: '12px 24px',
     fontSize: '16px',
     fontWeight: 600,
     color: '#fff',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: '#FF6B35', // Vibrant orange matching logo
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+    transition: 'transform 0.2s, box-shadow 0.2s, background 0.2s',
+    boxShadow: '0 4px 12px rgba(255, 107, 53, 0.4)',
     ...style,
   };
 
@@ -92,30 +92,22 @@ export const AuthAgentButton: React.FC<AuthAgentButtonProps> = ({
       style={defaultStyle}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.5)';
+        e.currentTarget.style.background = '#FF5722'; // Darker orange on hover
+        e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 107, 53, 0.5)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+        e.currentTarget.style.background = '#FF6B35';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 107, 53, 0.4)';
       }}
     >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-          fill="currentColor"
-        />
-        <path
-          d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"
-          fill="currentColor"
-        />
-        <circle cx="12" cy="12" r="2" fill="currentColor" />
-      </svg>
+      <img
+        src="./AA.png"
+        alt="Auth Agent"
+        width={24}
+        height={24}
+        style={{ objectFit: 'contain', display: 'block' }}
+      />
       {children || 'Sign in with Auth Agent'}
     </button>
   );
@@ -154,11 +146,14 @@ export const AuthAgentButtonMinimal: React.FC<AuthAgentButtonProps> = ({
   };
 
   const defaultStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
     padding: '8px 16px',
     fontSize: '14px',
-    color: '#667eea',
+    color: '#FF6B35',
     background: 'transparent',
-    border: '2px solid #667eea',
+    border: '2px solid #FF6B35',
     borderRadius: '6px',
     cursor: 'pointer',
     transition: 'all 0.2s',
@@ -171,14 +166,21 @@ export const AuthAgentButtonMinimal: React.FC<AuthAgentButtonProps> = ({
       className={className}
       style={defaultStyle}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = '#667eea';
+        e.currentTarget.style.background = '#FF6B35';
         e.currentTarget.style.color = '#fff';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = 'transparent';
-        e.currentTarget.style.color = '#667eea';
+        e.currentTarget.style.color = '#FF6B35';
       }}
     >
+      <img
+        src="./AA.png"
+        alt="Auth Agent"
+        width={18}
+        height={18}
+        style={{ objectFit: 'contain', display: 'block' }}
+      />
       {children || 'Sign in with Auth Agent'}
     </button>
   );
