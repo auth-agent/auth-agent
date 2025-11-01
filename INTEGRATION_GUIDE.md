@@ -50,87 +50,39 @@ AUTH_AGENT_CLIENT_SECRET=secret_xyz789
 ```tsx
 'use client';
 
-import { useState } from 'react';
+import Script from 'next/script';
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-
-  const handleSignIn = async () => {
-    setLoading(true);
-
-    try {
-      // Generate PKCE
-      const codeVerifier = generateRandomString(128);
-      const codeChallenge = await sha256(codeVerifier);
-
-      // Save verifier
-      sessionStorage.setItem('code_verifier', codeVerifier);
-
-      // Build auth URL
-      const params = new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_AUTH_AGENT_CLIENT_ID!,
-        redirect_uri: `${window.location.origin}/callback`,
-        response_type: 'code',
-        state: generateRandomString(32),
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
-        scope: 'openid profile',
-      });
-
-      // Redirect
-      window.location.href = `${process.env.NEXT_PUBLIC_AUTH_AGENT_SERVER_URL}/authorize?${params}`;
-    } catch (error) {
-      console.error('Sign in error:', error);
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
         <h1 className="text-4xl font-bold mb-8">Welcome</h1>
 
-        <button
-          onClick={handleSignIn}
-          disabled={loading}
-          className="px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
-        >
-          {loading ? 'Redirecting...' : '🤖 Sign in with Auth Agent'}
-        </button>
+        <div
+          id="auth-agent-button"
+          data-auth-agent-container
+          className="flex justify-center"
+        />
+
+        <Script
+          src={`${process.env.NEXT_PUBLIC_AUTH_AGENT_SERVER_URL}/widget/signin-button.js`}
+          data-client-id={process.env.NEXT_PUBLIC_AUTH_AGENT_CLIENT_ID}
+          data-server-url={process.env.NEXT_PUBLIC_AUTH_AGENT_SERVER_URL}
+          strategy="afterInteractive"
+        />
+
+        <p className="mt-6 text-sm text-gray-500">
+          By continuing, you agree to authenticate via Auth Agent.
+        </p>
       </div>
     </div>
   );
 }
-
-// Helper functions
-function generateRandomString(length: number) {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  const randomValues = new Uint8Array(length);
-  crypto.getRandomValues(randomValues);
-  return Array.from(randomValues)
-    .map(x => charset[x % charset.length])
-    .join('');
-}
-
-async function sha256(plain: string) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(plain);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return base64UrlEncode(hash);
-}
-
-function base64UrlEncode(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-}
 ```
+
+> The embedded script defines the `<auth-agent-signin>` web component with a locked
+> label and styling, mirroring the Google Sign-In button so your team cannot
+> accidentally rename or restyle the Auth Agent brand.
 
 ---
 
@@ -159,14 +111,21 @@ export default function CallbackPage() {
           return;
         }
 
-        // Get code verifier
-        const codeVerifier = sessionStorage.getItem('code_verifier');
+        // Validate state and fetch PKCE verifier
+        const storedState = sessionStorage.getItem('auth-agent:state');
+        const codeVerifier = sessionStorage.getItem('auth-agent:code_verifier');
+        sessionStorage.removeItem('auth-agent:state');
+        sessionStorage.removeItem('auth-agent:code_verifier');
+
+        if (!storedState || storedState !== state) {
+          setStatus('Error: State mismatch. Please try again.');
+          return;
+        }
+
         if (!codeVerifier) {
           setStatus('Error: Code verifier not found');
           return;
         }
-
-        sessionStorage.removeItem('code_verifier');
 
         // Exchange code for token
         const response = await fetch('/api/auth/exchange', {

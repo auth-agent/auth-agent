@@ -31,6 +31,7 @@ import {
 } from './admin/clients.js';
 
 import { errorPage } from './templates/errorPage.js';
+import { signInButtonWidgetScript } from './templates/signInButtonWidget.js';
 
 const app = new Hono();
 
@@ -85,6 +86,16 @@ app.get('/api/health', (c) => {
     timestamp: Date.now(),
     version: '1.0.0',
   });
+});
+
+// ============================================
+// WIDGETS
+// ============================================
+
+app.get('/widget/signin-button.js', (c) => {
+  c.header('Content-Type', 'application/javascript; charset=utf-8');
+  c.header('Cache-Control', 'public, max-age=300');
+  return c.body(signInButtonWidgetScript());
 });
 
 // Error page endpoint
