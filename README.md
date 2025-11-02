@@ -2,7 +2,7 @@
 
 ![Auth Agent Logo](./logo/AA.png)
 
-# Auth Agent - OAuth 2.1 for AI Agents
+# Auth Agent - OIDC + OAuth 2.1 for AI Agents
 
 **Standardized authentication for autonomous AI agents**
 
