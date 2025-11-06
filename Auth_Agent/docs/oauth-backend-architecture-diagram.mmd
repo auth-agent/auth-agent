@@ -1,0 +1,90 @@
+graph TB
+    subgraph "AI Agent Environment"
+        Agent[🤖 AI Agent<br/>browser-use]
+        AgentSDK[📦 Agent SDK<br/>Python/TypeScript]
+    end
+
+    subgraph "Website (Client)"
+        Website[🌐 Website<br/>Next.js]
+        ClientSDK[📦 Client SDK<br/>React Component]
+        Callback[🔄 Callback Handler<br/>/auth-agent/callback]
+        TokenExchange[🔐 Token Exchange API<br/>/api/auth-agent/exchange]
+    end
+
+    subgraph "Auth Agent Server (Convex)"
+        subgraph "HTTP Endpoints"
+            Authorize[/authorize<br/>GET - OAuth Authorization]
+            Token[/token<br/>POST - Token Exchange]
+            AgentAuth[/api/agent/authenticate<br/>POST - Agent Verification]
+            StatusCheck[/api/check-status<br/>GET - Status Polling]
+            Introspect[/introspect<br/>POST - Token Validation]
+            Revoke[/revoke<br/>POST - Token Revocation]
+            Discovery[/.well-known/oauth-authorization-server<br/>GET - OAuth Discovery]
+        end
+
+        subgraph "Crypto Actions (Node.js)"
+            PBKDF2Hash[🔒 PBKDF2 Hashing<br/>hashSecretAction]
+            PBKDF2Verify[✅ Secret Verification<br/>verifySecretAction]
+            PKCEValidate[🔑 PKCE Validation<br/>validatePKCEAction]
+            JWTGenerate[🎫 JWT Generation<br/>generateJWTAction]
+            RandomGen[🎲 Secure Random<br/>generateSecureRandomAction]
+        end
+
+        subgraph "Database (Convex)"
+            AuthRequests[(📋 Auth Requests<br/>code_challenge, state)]
+            AuthCodes[(🔐 Authorization Codes<br/>code, request_id)]
+            Tokens[(🎫 Tokens<br/>access_token, refresh_token)]
+            Agents[(🤖 Agents<br/>agent_id, agent_secret_hash)]
+            Clients[(🌐 Clients<br/>client_id, client_secret_hash)]
+        end
+
+        subgraph "Templates"
+            SpinningPage[⚙️ Spinning Page<br/>window.authRequest]
+            ErrorPage[❌ Error Page<br/>OAuth Errors]
+        end
+    end
+
+    %% OAuth Flow
+    Agent -->|1. Navigate & Click| Website
+    Website -->|2. Generate PKCE| ClientSDK
+    ClientSDK -->|3. Redirect to /authorize| Authorize
+    Authorize -->|4. Validate client_id| Clients
+    Authorize -->|5. Create auth request| AuthRequests
+    Authorize -->|6. Return spinning page| SpinningPage
+    SpinningPage -->|7. Agent reads| Agent
+    Agent -->|8. Extract request_id| AgentSDK
+    AgentSDK -->|9. POST credentials| AgentAuth
+    AgentAuth -->|10. Verify agent| Agents
+    AgentAuth -->|11. PBKDF2 verify| PBKDF2Verify
+    AgentAuth -->|12. Mark authenticated| AuthCodes
+    Agent -->|13. Poll status| StatusCheck
+    StatusCheck -->|14. Check auth status| AuthCodes
+    AuthCodes -->|15. Return authenticated| Agent
+    Agent -->|16. Redirect with code| Callback
+    Callback -->|17. Exchange code| TokenExchange
+    TokenExchange -->|18. POST /token| Token
+    Token -->|19. Validate PKCE| PKCEValidate
+    Token -->|20. Verify client| Clients
+    Token -->|21. Verify secret| PBKDF2Verify
+    Token -->|22. Generate JWT| JWTGenerate
+    Token -->|23. Generate refresh| RandomGen
+    Token -->|24. Store tokens| Tokens
+    Token -->|25. Return tokens| TokenExchange
+    TokenExchange -->|26. Store in localStorage| Website
+    Website -->|27. Redirect to dashboard| Agent
+
+    %% Styling
+    classDef agentClass fill:#4A90E2,stroke:#2E5C8A,stroke-width:2px,color:#fff
+    classDef websiteClass fill:#50C878,stroke:#2E7D4F,stroke-width:2px,color:#fff
+    classDef serverClass fill:#9B59B6,stroke:#6C3483,stroke-width:2px,color:#fff
+    classDef cryptoClass fill:#E74C3C,stroke:#A93226,stroke-width:2px,color:#fff
+    classDef dbClass fill:#F39C12,stroke:#B9770E,stroke-width:2px,color:#fff
+    classDef templateClass fill:#3498DB,stroke:#2471A3,stroke-width:2px,color:#fff
+
+    class Agent,AgentSDK agentClass
+    class Website,ClientSDK,Callback,TokenExchange websiteClass
+    class Authorize,Token,AgentAuth,StatusCheck,Introspect,Revoke,Discovery serverClass
+    class PBKDF2Hash,PBKDF2Verify,PKCEValidate,JWTGenerate,RandomGen cryptoClass
+    class AuthRequests,AuthCodes,Tokens,Agents,Clients dbClass
+    class SpinningPage,ErrorPage templateClass
+

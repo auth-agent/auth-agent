@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth-Agent Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* Animated Orange Dots Background */
+        .dots-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: #f97316;
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+            opacity: 0.3;
+        }
+
+        .dot:nth-child(2n) {
+            animation-delay: -2s;
+            animation-duration: 8s;
+        }
+
+        .dot:nth-child(3n) {
+            animation-delay: -4s;
+            animation-duration: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) translateX(0px);
+                opacity: 0.3;
+            }
+            25% {
+                transform: translateY(-20px) translateX(10px);
+                opacity: 0.6;
+            }
+            50% {
+                transform: translateY(-10px) translateX(-15px);
+                opacity: 0.4;
+            }
+            75% {
+                transform: translateY(-30px) translateX(5px);
+                opacity: 0.7;
+            }
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 64px;
+            bottom: 0;
+            width: 256px;
+            background: rgba(17, 17, 17, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(249, 115, 22, 0.1);
+            overflow-y: auto;
+            padding: 16px 0;
+            z-index: 50;
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+        }
+        .sidebar-item:hover {
+            background: rgba(249, 115, 22, 0.1);
+            color: #ffffff;
+        }
+        .sidebar-item.active {
+            background: rgba(249, 115, 22, 0.2);
+            color: #f97316;
+            border-right: 3px solid #f97316;
+        }
+        .sidebar-item-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: rgba(17, 17, 17, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(249, 115, 22, 0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 100;
+        }
+        .content {
+            margin-left: 256px;
+            margin-top: 64px;
+            padding: 32px 48px;
+            min-height: calc(100vh - 64px);
+        }
+        .page-section {
+            display: none;
+        }
+        .page-section.active {
+            display: block;
+        }
+        .card {
+            background: rgba(31, 31, 31, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .btn-primary {
+            background: #f97316;
+            color: #000000;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary:hover {
+            background: #ea580c;
+            transform: translateY(-1px);
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-secondary {
+            background: rgba(249, 115, 22, 0.1);
+            color: #f97316;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background: rgba(249, 115, 22, 0.2);
+            border-color: #f97316;
+        }
+        .input-field {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(31, 31, 31, 0.8);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
+            color: #ffffff;
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #f97316;
+            background: rgba(31, 31, 31, 1);
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+        .label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(249, 115, 22, 0.2);
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .table td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(249, 115, 22, 0.1);
+        }
+        .table tbody tr:hover {
+            background: rgba(249, 115, 22, 0.05);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .badge-warning {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: rgba(17, 17, 17, 0.98);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(249, 115, 22, 0.3);
+        }
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(249, 115, 22, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-body {
+            padding: 24px;
+        }
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid rgba(249, 115, 22, 0.2);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .code-block {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            color: #d4d4d4;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .empty-state-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.3;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000000;
+            font-weight: 900;
+            font-size: 18px;
+        }
+        .alert {
+            padding: 14px 18px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            border-left: 4px solid;
+        }
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border-color: #3b82f6;
+        }
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+            border-color: #22c55e;
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: #ef4444;
+        }
+        select.input-field {
+            cursor: pointer;
+        }
+        code {
+            background: rgba(249, 115, 22, 0.1);
+            color: #f97316;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #ffffff 0%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            color: #ffffff;
+        }
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 24px 0 12px 0;
+            color: #f97316;
+        }
+        .close-btn {
+            border: none;
+            background: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .close-btn:hover {
+            background: rgba(249, 115, 22, 0.1);
+            color: #f97316;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Dots Background -->
+    <div class="dots-container" id="dotsContainer"></div>
+
+    <div class="content-wrapper">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="logo">
+                <div class="logo-icon">A</div>
+                <span>Auth-Agent Console</span>
+            </div>
+            <div style="flex: 1;"></div>
+            <div id="userInfo" style="font-size: 14px; color: rgba(255, 255, 255, 0.7);">
+                <!-- User info will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <a href="#" class="sidebar-item active" onclick="showPage('credentials'); return false;">
+                <svg class="sidebar-item-icon" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                </svg>
+                OAuth Clients
+            </a>
+            <a href="#" class="sidebar-item" onclick="showPage('agents'); return false;">
+                <svg class="sidebar-item-icon" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                </svg>
+                AI Agents
+            </a>
+            <a href="#" class="sidebar-item" onclick="showPage('docs'); return false;">
+                <svg class="sidebar-item-icon" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+                Documentation
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- OAuth Clients Page -->
+            <div id="page-credentials" class="page-section active">
+                <h1>OAuth 2.1 Clients</h1>
+                <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 24px 0;">Create and manage OAuth 2.1 + PKCE clients for your web applications</p>
+
+                <div class="alert alert-info">
+                    <strong>OAuth 2.1 with PKCE:</strong> All clients must use Authorization Code Flow with PKCE (Proof Key for Code Exchange). Credentials are managed via Convex backend.
+                </div>
+
+                <button class="btn-primary" onclick="openCreateClientModal()">
+                    + Create OAuth Client
+                </button>
+
+                <div class="card" style="margin-top: 24px;">
+                    <h2>Your OAuth Clients</h2>
+                    <div id="clientsTableContainer">
+                        <div class="empty-state">
+                            <svg class="empty-state-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                            </svg>
+                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.7);">No OAuth clients yet</h3>
+                            <p style="margin: 0;">Create your first OAuth client to integrate authentication</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Agents Page -->
+            <div id="page-agents" class="page-section">
+                <h1>AI Agents</h1>
+                <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 24px 0;">Register AI agents to authenticate with websites using OAuth 2.1</p>
+
+                <button class="btn-primary" onclick="openCreateAgentModal()">
+                    + Register AI Agent
+                </button>
+
+                <div class="card" style="margin-top: 24px;">
+                    <h2>Your AI Agents</h2>
+                    <div id="agentsTableContainer">
+                        <div class="empty-state">
+                            <svg class="empty-state-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                            </svg>
+                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.7);">No AI agents registered</h3>
+                            <p style="margin: 0;">Register your first AI agent to start authenticating</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation Page -->
+            <div id="page-docs" class="page-section">
+                <h1>Documentation</h1>
+                <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 24px 0;">Integration guides and API reference</p>
+
+                <div class="card">
+                    <h2>Quick Start</h2>
+                    <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 16px 0;">Get started with Auth-Agent in 5 minutes</p>
+
+                    <h3>For Websites (OAuth Clients)</h3>
+                    <div class="code-block">// 1. Create OAuth client above
+// 2. Install SDK
+npm install @auth-agent/web
+
+// 3. Initialize OAuth flow with PKCE
+import { AuthAgent } from '@auth-agent/web'
+
+const auth = new AuthAgent({
+  clientId: 'your_client_id',
+  redirectUri: 'https://yoursite.com/callback'
+})
+
+// Start OAuth flow (PKCE generated automatically)
+auth.login()
+
+// Handle callback
+const tokens = await auth.handleCallback(window.location.search)</div>
+
+                    <h3>For AI Agents</h3>
+                    <div class="code-block"># 1. Register AI agent above
+# 2. Install SDK
+pip install auth-agent
+
+# 3. Authenticate with SDK
+from auth_agent import AgentSDK
+
+sdk = AgentSDK(
+    agent_id="your_agent_id",
+    agent_secret="your_secret"
+)
+
+# Poll and authenticate
+auth_url = sdk.get_authorization_url(
+    redirect_uri="https://website.com/callback",
+    scope="openid profile email"
+)
+
+# Open auth_url in browser, SDK polls automatically
+success = sdk.poll_and_authenticate(verify_ctx_id, timeout=30)</div>
+                </div>
+
+                <div class="card">
+                    <h2>API Endpoints</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Endpoint</th>
+                                <th>Method</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/authorize</code></td>
+                                <td><span class="badge badge-success">GET</span></td>
+                                <td>OAuth 2.1 authorization endpoint (requires code_challenge)</td>
+                            </tr>
+                            <tr>
+                                <td><code>/token</code></td>
+                                <td><span class="badge badge-warning">POST</span></td>
+                                <td>Exchange authorization code for access token</td>
+                            </tr>
+                            <tr>
+                                <td><code>/userinfo</code></td>
+                                <td><span class="badge badge-success">GET</span></td>
+                                <td>Get authenticated agent information</td>
+                            </tr>
+                            <tr>
+                                <td><code>/verify_challenge</code></td>
+                                <td><span class="badge badge-success">GET</span></td>
+                                <td>Agent SDK polls for challenge</td>
+                            </tr>
+                            <tr>
+                                <td><code>/verify_confirm</code></td>
+                                <td><span class="badge badge-warning">POST</span></td>
+                                <td>Agent confirms authentication</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create OAuth Client Modal -->
+    <div id="createClientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin: 0;">Create OAuth Client</h2>
+                <button onclick="closeModal('createClientModal')" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createClientForm" onsubmit="createClient(event)">
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Application Name *</label>
+                        <input type="text" name="name" class="input-field" placeholder="My Website" required>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Client ID *</label>
+                        <input type="text" name="client_id" class="input-field" placeholder="my_website_client" required pattern="[a-zA-Z0-9_]+" title="Only letters, numbers, and underscores">
+                        <small style="color: rgba(255, 255, 255, 0.5); font-size: 12px;">Unique identifier (alphanumeric + underscores)</small>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Redirect URI *</label>
+                        <input type="url" name="redirect_uri" class="input-field" placeholder="https://example.com/auth/callback" required>
+                        <small style="color: rgba(255, 255, 255, 0.5); font-size: 12px;">Must be HTTPS in production</small>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Application Type</label>
+                        <select name="app_type" class="input-field">
+                            <option value="web">Web Application</option>
+                            <option value="spa">Single Page App</option>
+                            <option value="native">Native App</option>
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>PKCE Required:</strong> All clients must use PKCE. No client secret needed for public clients.
+                    </div>
+
+                    <div id="clientError" class="alert alert-error" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('createClientModal')">Cancel</button>
+                <button type="submit" form="createClientForm" class="btn-primary">Create Client</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create AI Agent Modal -->
+    <div id="createAgentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin: 0;">Register AI Agent</h2>
+                <button onclick="closeModal('createAgentModal')" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createAgentForm" onsubmit="createAgent(event)">
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Agent ID *</label>
+                        <input type="text" name="agent_id" class="input-field" placeholder="my_ai_agent" required pattern="[a-zA-Z0-9_]+" title="Only letters, numbers, and underscores">
+                        <small style="color: rgba(255, 255, 255, 0.5); font-size: 12px;">Unique identifier (alphanumeric + underscores)</small>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Agent Name *</label>
+                        <input type="text" name="agent_name" class="input-field" placeholder="My AI Assistant" required>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Company/Developer Name *</label>
+                        <input type="text" name="company_name" class="input-field" placeholder="Acme Corp" required>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Contact Email *</label>
+                        <input type="email" name="contact_email" class="input-field" placeholder="developer@example.com" required>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">
+                            <input type="checkbox" name="enable_2fa" style="margin-right: 8px;">
+                            Enable 2FA (Two-Factor Authentication)
+                        </label>
+                        <small style="color: rgba(255, 255, 255, 0.5); font-size: 12px; display: block; margin-top: 4px;">
+                            When enabled, agents must verify with a code sent to their AgentMail inbox during authentication
+                        </small>
+                    </div>
+
+                    <div id="agentError" class="alert alert-error" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('createAgentModal')">Cancel</button>
+                <button type="submit" form="createAgentForm" class="btn-primary">Register Agent</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Client Details Modal -->
+    <div id="viewClientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin: 0;">OAuth Client Details</h2>
+                <button onclick="closeModal('viewClientModal')" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="clientDetailsContent">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('viewClientModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Agent Details Modal -->
+    <div id="viewAgentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="margin: 0;">AI Agent Details</h2>
+                <button onclick="closeModal('viewAgentModal')" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="agentDetailsContent">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('viewAgentModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create animated dots
+        function createDots() {
+            const container = document.getElementById('dotsContainer');
+            const dotCount = 30;
+
+            for (let i = 0; i < dotCount; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.style.left = Math.random() * 100 + '%';
+                dot.style.top = Math.random() * 100 + '%';
+                dot.style.animationDelay = Math.random() * 6 + 's';
+                container.appendChild(dot);
+            }
+        }
+
+        // Initialize
+        createDots();
+
+        // Configuration - Use your Convex backend
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000'
+            : 'https://clever-pika-819.convex.site'
+
+        // API helper functions
+        async function apiRequest(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            })
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ message: 'Request failed' }))
+                throw new Error(error.message || `HTTP ${response.status}`)
+            }
+
+            return response.json()
+        }
+
+        // Utility functions
+        function showPage(page) {
+            // Update sidebar
+            document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'))
+            event.target.closest('.sidebar-item').classList.add('active')
+
+            // Update content
+            document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'))
+            document.getElementById('page-' + page).classList.add('active')
+
+            // Load data if needed
+            if (page === 'credentials') loadClients()
+            if (page === 'agents') loadAgents()
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active')
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active')
+            // Reset forms
+            const form = document.getElementById(modalId).querySelector('form')
+            if (form) form.reset()
+            // Hide error messages
+            const errors = document.getElementById(modalId).querySelectorAll('.alert-error')
+            errors.forEach(error => error.style.display = 'none')
+        }
+
+        function openCreateClientModal() {
+            openModal('createClientModal')
+        }
+
+        function openCreateAgentModal() {
+            openModal('createAgentModal')
+        }
+
+        // Generate random secret
+        function generateSecret() {
+            const array = new Uint8Array(32)
+            crypto.getRandomValues(array)
+            return 'sk_' + btoa(String.fromCharCode(...array)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 40)
+        }
+
+        // Load OAuth clients
+        async function loadClients() {
+            try {
+                const response = await apiRequest('/api/admin/clients')
+                const clients = response.clients || []
+
+                if (clients.length === 0) {
+                    document.getElementById('clientsTableContainer').innerHTML = `
+                        <div class="empty-state">
+                            <svg class="empty-state-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                            </svg>
+                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.7);">No OAuth clients yet</h3>
+                            <p style="margin: 0;">Create your first OAuth client to integrate authentication</p>
+                        </div>
+                    `
+                    return
+                }
+
+                let html = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Client ID</th>
+                                <th>Redirect URI</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `
+
+                clients.forEach(client => {
+                    const date = new Date(client.created_at).toLocaleDateString()
+                    html += `
+                        <tr>
+                            <td><strong>${client.client_name || client.client_id}</strong></td>
+                            <td><code>${client.client_id}</code></td>
+                            <td style="color: rgba(255, 255, 255, 0.7);">${client.redirect_uri}</td>
+                            <td style="color: rgba(255, 255, 255, 0.5);">${date}</td>
+                            <td>
+                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick='viewClient(${JSON.stringify(client)})'>View</button>
+                            </td>
+                        </tr>
+                    `
+                })
+
+                html += `
+                        </tbody>
+                    </table>
+                `
+
+                document.getElementById('clientsTableContainer').innerHTML = html
+
+                // TODO: Uncomment when Supabase is configured
+                /*
+                const response = await apiRequest('/clients')
+                const clients = response.data || []
+
+                if (clients.length === 0) {
+                    document.getElementById('clientsTableContainer').innerHTML = `
+                        <div class="empty-state">
+                            <svg class="empty-state-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                            </svg>
+                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.7);">No OAuth clients yet</h3>
+                            <p style="margin: 0;">Create your first OAuth client to integrate authentication</p>
+                        </div>
+                    `
+                    return
+                }
+
+                let html = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Client ID</th>
+                                <th>Redirect URI</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `
+
+                clients.forEach(client => {
+                    const date = new Date(client.created_at).toLocaleDateString()
+                    html += `
+                        <tr>
+                            <td><strong>${client.website_id || 'Unnamed'}</strong></td>
+                            <td><code>${client.client_id}</code></td>
+                            <td style="color: rgba(255, 255, 255, 0.7);">${client.redirect_uri}</td>
+                            <td style="color: rgba(255, 255, 255, 0.5);">${date}</td>
+                            <td>
+                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="viewClient('${client.client_id}')">View</button>
+                            </td>
+                        </tr>
+                    `
+                })
+
+                html += `
+                        </tbody>
+                    </table>
+                `
+
+                document.getElementById('clientsTableContainer').innerHTML = html
+                */
+            } catch (error) {
+                console.error('Failed to load clients:', error)
+                document.getElementById('clientsTableContainer').innerHTML = `
+                    <div class="alert alert-error">Failed to load OAuth clients. Please refresh the page.</div>
+                `
+            }
+        }
+
+        // Load AI agents
+        async function loadAgents() {
+            try {
+                const response = await apiRequest('/api/admin/agents')
+                const agents = response.agents || []
+
+                if (agents.length === 0) {
+                    document.getElementById('agentsTableContainer').innerHTML = `
+                        <div class="empty-state">
+                            <svg class="empty-state-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                            </svg>
+                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.7);">No AI agents registered</h3>
+                            <p style="margin: 0;">Register your first AI agent to start authenticating</p>
+                        </div>
+                    `
+                    return
+                }
+
+                let html = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Agent ID</th>
+                                <th>User Email</th>
+                                <th>User Name</th>
+                                <th>2FA</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `
+
+                agents.forEach(agent => {
+                    const date = new Date(agent.created_at).toLocaleDateString()
+                    const twoFAStatus = agent.two_factor_enabled ?
+                        '<span class="badge badge-success">Enabled</span>' :
+                        '<span class="badge badge-warning">Disabled</span>'
+                    html += `
+                        <tr>
+                            <td><code>${agent.agent_id}</code></td>
+                            <td style="color: rgba(255, 255, 255, 0.7);">${agent.user_email}</td>
+                            <td style="color: rgba(255, 255, 255, 0.7);">${agent.user_name}</td>
+                            <td>${twoFAStatus}</td>
+                            <td style="color: rgba(255, 255, 255, 0.5);">${date}</td>
+                            <td>
+                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick='viewAgent(${JSON.stringify(agent)})'>View</button>
+                            </td>
+                        </tr>
+                    `
+                })
+
+                html += `
+                        </tbody>
+                    </table>
+                `
+
+                document.getElementById('agentsTableContainer').innerHTML = html
+
+                // TODO: Uncomment when configured
+                /*
+                const response = await apiRequest('/agents')
+                const agents = response.data || []
+
+                if (agents.length === 0) {
+                    document.getElementById('agentsTableContainer').innerHTML = `
+                        <div class="empty-state">
+                            <svg class="empty-state-icon" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                            </svg>
+                            <h3 style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.7);">No AI agents registered</h3>
+                            <p style="margin: 0;">Register your first AI agent to start authenticating</p>
+                        </div>
+                    `
+                    return
+                }
+
+                let html = `
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Agent Name</th>
+                                <th>Agent ID</th>
+                                <th>Company</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `
+
+                agents.forEach(agent => {
+                    const status = agent.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-warning">Inactive</span>'
+                    html += `
+                        <tr>
+                            <td><strong>${agent.agent_name || agent.company_name}</strong></td>
+                            <td><code>${agent.agent_id}</code></td>
+                            <td style="color: rgba(255, 255, 255, 0.7);">${agent.company_name}</td>
+                            <td>${status}</td>
+                            <td>
+                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="viewAgent('${agent.agent_id}')">View</button>
+                            </td>
+                        </tr>
+                    `
+                })
+
+                html += `
+                        </tbody>
+                    </table>
+                `
+
+                document.getElementById('agentsTableContainer').innerHTML = html
+                */
+            } catch (error) {
+                console.error('Failed to load agents:', error)
+                document.getElementById('agentsTableContainer').innerHTML = `
+                    <div class="alert alert-error">Failed to load AI agents. Please refresh the page.</div>
+                `
+            }
+        }
+
+        // Create OAuth client
+        async function createClient(event) {
+            event.preventDefault()
+            const form = event.target
+            const formData = new FormData(form)
+
+            const clientData = {
+                client_name: formData.get('name'),
+                client_id: formData.get('client_id'),
+                redirect_uri: formData.get('redirect_uri')
+            }
+
+            try {
+                const response = await apiRequest('/api/admin/clients', {
+                    method: 'POST',
+                    body: JSON.stringify(clientData)
+                })
+
+                closeModal('createClientModal')
+                loadClients()
+
+                // Show success
+                alert(`✅ OAuth client created successfully!\n\nClient ID: ${response.client_id}\n\nYou can now use this client_id in your OAuth flow.`)
+            } catch (error) {
+                console.error('Create client error:', error)
+                document.getElementById('clientError').textContent = error.message
+                document.getElementById('clientError').style.display = 'block'
+            }
+        }
+
+        // Create AI agent
+        async function createAgent(event) {
+            event.preventDefault()
+            const form = event.target
+            const formData = new FormData(form)
+
+            // Check if 2FA checkbox exists and is checked
+            const enable2FACheckbox = form.querySelector('input[name="enable_2fa"]')
+            const enable2FA = enable2FACheckbox ? enable2FACheckbox.checked : false
+
+            const agentData = {
+                agent_id: formData.get('agent_id'),
+                user_email: formData.get('contact_email'),
+                user_name: formData.get('agent_name'),
+                enable_2fa: enable2FA
+            }
+
+            try {
+                const response = await apiRequest('/api/admin/agents', {
+                    method: 'POST',
+                    body: JSON.stringify(agentData)
+                })
+
+                closeModal('createAgentModal')
+                loadAgents()
+
+                // Show success with secret
+                let message = `✅ AI agent registered successfully!\n\nAgent ID: ${response.agent_id}\nAgent Secret: ${response.agent_secret}\n\n⚠️  IMPORTANT: Save the agent secret now. It will not be shown again!`
+
+                if (response.two_factor_enabled) {
+                    message += `\n\n🔐 2FA Enabled\nAgentMail Inbox: ${response.agentmail_inbox}`
+                }
+
+                alert(message)
+            } catch (error) {
+                console.error('Create agent error:', error)
+                document.getElementById('agentError').textContent = error.message
+                document.getElementById('agentError').style.display = 'block'
+            }
+        }
+
+        // View client details
+        async function viewClient(client) {
+            try {
+                const content = `
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Application Name</label>
+                        <div class="input-field" style="background: rgba(31, 31, 31, 0.5);">${client.client_name || client.client_id}</div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Client ID</label>
+                        <div class="input-field" style="background: rgba(31, 31, 31, 0.5); font-family: monospace;">${client.client_id}</div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Redirect URI</label>
+                        <div class="input-field" style="background: rgba(31, 31, 31, 0.5);">${client.redirect_uri}</div>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Integration:</strong> Use Authorization Code Flow + PKCE. Include the following parameters in your authorization request:
+                        <ul style="margin-top: 8px;">
+                            <li><code>client_id</code>: ${client.client_id}</li>
+                            <li><code>redirect_uri</code>: ${client.redirect_uri}</li>
+                            <li><code>code_challenge</code>: SHA-256 hash of your code_verifier</li>
+                            <li><code>code_challenge_method</code>: S256</li>
+                        </ul>
+                    </div>
+                `
+
+                document.getElementById('clientDetailsContent').innerHTML = content
+                openModal('viewClientModal')
+            } catch (error) {
+                alert('Failed to load client details: ' + error.message)
+            }
+        }
+
+        // View agent details
+        async function viewAgent(agent) {
+            try {
+                const twoFAInfo = agent.two_factor_enabled
+                    ? `<div style="margin-bottom: 16px;">
+                            <label class="label">2FA Status</label>
+                            <div class="input-field" style="background: rgba(31, 31, 31, 0.5);">
+                                <span class="badge badge-success">Enabled</span>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label class="label">AgentMail Inbox</label>
+                            <div class="input-field" style="background: rgba(31, 31, 31, 0.5); font-family: monospace;">${agent.agentmail_inbox_id || 'N/A'}</div>
+                            <small style="color: rgba(255, 255, 255, 0.5); font-size: 12px;">Verification codes are sent to this inbox</small>
+                        </div>`
+                    : `<div style="margin-bottom: 16px;">
+                            <label class="label">2FA Status</label>
+                            <div class="input-field" style="background: rgba(31, 31, 31, 0.5);">
+                                <span class="badge badge-warning">Disabled</span>
+                            </div>
+                        </div>`
+
+                const content = `
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">Agent ID</label>
+                        <div class="input-field" style="background: rgba(31, 31, 31, 0.5); font-family: monospace;">${agent.agent_id}</div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">User Name</label>
+                        <div class="input-field" style="background: rgba(31, 31, 31, 0.5);">${agent.user_name}</div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="label">User Email</label>
+                        <div class="input-field" style="background: rgba(31, 31, 31, 0.5);">${agent.user_email}</div>
+                        <small style="color: rgba(255, 255, 255, 0.5); font-size: 12px;">Human owner's email for audit trail</small>
+                    </div>
+                    ${twoFAInfo}
+                    <div class="alert alert-info">
+                        <strong>SDK Usage:</strong> Use the agent_id and agent_secret (provided during creation) with the Python SDK:
+                        <pre style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 4px; margin-top: 8px; overflow-x: auto;"><code>from auth_agent_agent_sdk import AuthAgentAgentSDK
+
+sdk = AuthAgentAgentSDK(
+    agent_id="${agent.agent_id}",
+    agent_secret="your_agent_secret",
+    model="gpt-4"
+)</code></pre>
+                    </div>
+                    ${agent.two_factor_enabled ? '<div class="alert alert-warning" style="background: rgba(251, 191, 36, 0.1); border-color: #fbbf24; color: #fbbf24;"><strong>2FA Enabled:</strong> This agent must complete 2FA verification during authentication using the AgentMail inbox.</div>' : ''}
+                `
+
+                document.getElementById('agentDetailsContent').innerHTML = content
+                openModal('viewAgentModal')
+            } catch (error) {
+                alert('Failed to load agent details: ' + error.message)
+            }
+        }
+
+        // Load initial data
+        loadClients()
+    </script>
+</body>
+</html>

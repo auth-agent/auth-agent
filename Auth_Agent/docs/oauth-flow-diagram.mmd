@@ -1,0 +1,43 @@
+sequenceDiagram
+    participant Agent as AI Agent<br/>(browser-use)
+    participant Website as Website<br/>(Next.js)
+    participant AuthServer as Auth Server<br/>(Convex)
+
+    Note over Agent,AuthServer: Auth Agent OAuth 2.1 Flow
+
+    Agent->>Website: 1. Navigate to website
+    Agent->>Website: 2. Click "Sign in with<br/>Auth Agent" button
+    
+    Note over Website: 3. Generate PKCE<br/>(code_verifier, code_challenge)
+    
+    Website->>AuthServer: 4. Redirect to /authorize<br/>(with PKCE challenge)
+    
+    AuthServer->>Agent: 5. Return spinning page<br/>(shows "Authenticating AI Agent")
+    
+    Note over Agent: 6. Extract request_id<br/>from window.authRequest
+    
+    Agent->>AuthServer: 7. POST /api/agent/authenticate<br/>{ request_id, agent_id,<br/>agent_secret, model }
+    
+    Note over AuthServer: 8. Verify credentials<br/>(PBKDF2 hash check)
+    
+    AuthServer->>Agent: 9. Authentication success
+    
+    loop Polling for completion
+        Agent->>AuthServer: 10. GET /api/check-status?<br/>request_id=...
+        AuthServer->>Agent: 11. Status: "authenticated"
+    end
+    
+    Agent->>Website: 12. Auto-redirect to callback<br/>(with authorization code)
+    
+    Website->>AuthServer: 13. POST /token<br/>{ code, code_verifier,<br/>client_id, secret }
+    
+    Note over AuthServer: 14. Validate PKCE<br/>(SHA-256 verify)
+    Note over AuthServer: 15. Generate JWT &<br/>refresh token
+    
+    AuthServer->>Website: 16. Return tokens<br/>{ access_token, refresh_token }
+    
+    Note over Website: 17. Store tokens in<br/>localStorage
+    
+    Website->>Agent: 18. Redirect to dashboard<br/>(authenticated!)
+
+

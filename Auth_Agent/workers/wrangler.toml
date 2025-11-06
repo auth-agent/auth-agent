@@ -1,0 +1,12 @@
+name = "auth-agent-workers"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+JWT_ISSUER = "https://api.auth-agent.com"
+
+# Environment secrets (set via: wrangler secret put <NAME>)
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_ROLE_KEY
+# - JWT_SECRET

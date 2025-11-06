@@ -1,0 +1,117 @@
+graph TB
+    subgraph "Frontend Layer"
+        subgraph "Demo Websites"
+            GitHub[📦 GitHub Clone<br/>Next.js + React]
+            Crypto[📈 Crypto Exchange<br/>Next.js + React]
+            Ecommerce[🛒 E-commerce<br/>Next.js + React]
+        end
+
+        subgraph "Client SDK"
+            ReactSDK[⚛️ React Component<br/>AuthAgentButton]
+            TypeScriptSDK[📘 TypeScript SDK<br/>Client Library]
+        end
+    end
+
+    subgraph "AI Agent Layer"
+        subgraph "Browser Automation"
+            BrowserUse[🌐 browser-use<br/>Browser Automation]
+            Puppeteer[🤖 Puppeteer<br/>Alternative]
+            Selenium[⚙️ Selenium<br/>Alternative]
+        end
+
+        subgraph "Agent SDK"
+            PythonSDK[🐍 Python SDK<br/>Agent Library]
+            TSAgentSDK[📘 TypeScript SDK<br/>Agent Library]
+        end
+    end
+
+    subgraph "Backend Layer (Convex)"
+        subgraph "HTTP Functions"
+            OAuthEndpoints[🔐 OAuth Endpoints<br/>15+ Routes]
+            AdminEndpoints[⚙️ Admin Endpoints<br/>Agent/Client Mgmt]
+            DiscoveryEndpoints[📋 Discovery<br/>.well-known]
+        end
+
+        subgraph "Serverless Actions"
+            CryptoActions[🔒 Crypto Actions<br/>Node.js Runtime]
+        end
+
+        subgraph "Database"
+            ConvexDB[(🗄️ Convex Database<br/>Real-time)]
+        end
+
+        subgraph "Security"
+            PBKDF2[🔐 PBKDF2<br/>Secret Hashing]
+            PKCE[🔑 PKCE<br/>SHA-256]
+            JWT[🎫 JWT<br/>HS256 Signing]
+        end
+    end
+
+    subgraph "Deployment"
+        Vercel[▲ Vercel<br/>Website Hosting]
+        ConvexCloud[☁️ Convex Cloud<br/>Serverless Backend]
+    end
+
+    subgraph "Technologies"
+        TypeScript[📘 TypeScript<br/>Type Safety]
+        NodeJS[🟢 Node.js<br/>Crypto Runtime]
+        Python[🐍 Python<br/>Agent SDK]
+        React[⚛️ React<br/>UI Components]
+        NextJS[▲ Next.js<br/>Web Framework]
+    end
+
+    %% Frontend connections
+    GitHub --> ReactSDK
+    Crypto --> ReactSDK
+    Ecommerce --> ReactSDK
+    ReactSDK --> TypeScriptSDK
+    TypeScriptSDK --> OAuthEndpoints
+
+    %% Agent connections
+    BrowserUse --> PythonSDK
+    Puppeteer --> PythonSDK
+    Selenium --> PythonSDK
+    PythonSDK --> OAuthEndpoints
+    TSAgentSDK --> OAuthEndpoints
+
+    %% Backend connections
+    OAuthEndpoints --> CryptoActions
+    AdminEndpoints --> ConvexDB
+    OAuthEndpoints --> ConvexDB
+    CryptoActions --> PBKDF2
+    CryptoActions --> PKCE
+    CryptoActions --> JWT
+
+    %% Deployment
+    GitHub --> Vercel
+    Crypto --> Vercel
+    Ecommerce --> Vercel
+    OAuthEndpoints --> ConvexCloud
+    AdminEndpoints --> ConvexCloud
+    ConvexDB --> ConvexCloud
+
+    %% Technology usage
+    GitHub --> NextJS
+    Crypto --> NextJS
+    Ecommerce --> NextJS
+    ReactSDK --> React
+    TypeScriptSDK --> TypeScript
+    PythonSDK --> Python
+    CryptoActions --> NodeJS
+    OAuthEndpoints --> TypeScript
+
+    %% Styling
+    classDef frontendClass fill:#4A90E2,stroke:#2E5C8A,stroke-width:2px,color:#fff
+    classDef agentClass fill:#50C878,stroke:#2E7D4F,stroke-width:2px,color:#fff
+    classDef backendClass fill:#9B59B6,stroke:#6C3483,stroke-width:2px,color:#fff
+    classDef deployClass fill:#E74C3C,stroke:#A93226,stroke-width:2px,color:#fff
+    classDef techClass fill:#F39C12,stroke:#B9770E,stroke-width:2px,color:#fff
+    classDef securityClass fill:#1ABC9C,stroke:#138D75,stroke-width:2px,color:#fff
+
+    class GitHub,Crypto,Ecommerce,ReactSDK,TypeScriptSDK frontendClass
+    class BrowserUse,Puppeteer,Selenium,PythonSDK,TSAgentSDK agentClass
+    class OAuthEndpoints,AdminEndpoints,DiscoveryEndpoints,CryptoActions,ConvexDB backendClass
+    class Vercel,ConvexCloud deployClass
+    class TypeScript,NodeJS,Python,React,NextJS techClass
+    class PBKDF2,PKCE,JWT securityClass
+

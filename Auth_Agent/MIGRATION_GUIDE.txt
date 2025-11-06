@@ -1,0 +1,231 @@
+================================================================================
+AUTH AGENT - MIGRATION FROM CONVEX TO CLOUDFLARE WORKERS + SUPABASE
+================================================================================
+
+This guide will help you migrate from the Convex backend to Cloudflare Workers + Supabase.
+
+================================================================================
+STEP 1: SET UP SUPABASE
+================================================================================
+
+1. Create a new Supabase project at https://supabase.com
+
+2. Copy your Supabase credentials:
+   - Go to Project Settings > API
+   - Copy "Project URL" (SUPABASE_URL)
+   - Copy "service_role" key (SUPABASE_SERVICE_ROLE_KEY) - NOT the anon key!
+
+3. Run the database schema:
+   - Go to SQL Editor in your Supabase dashboard
+   - Copy the contents of: supabase/schema.sql
+   - Run the SQL to create all tables, indexes, and functions
+
+4. Verify the schema:
+   - Go to Table Editor
+   - You should see: clients, agents, auth_requests, auth_codes, tokens
+
+================================================================================
+STEP 2: DEPLOY CLOUDFLARE WORKERS
+================================================================================
+
+1. Install Wrangler CLI (if not already installed):
+   ```
+   npm install -g wrangler
+   # or
+   bun install -g wrangler
+   ```
+
+2. Login to Cloudflare:
+   ```
+   wrangler login
+   ```
+
+3. Navigate to the workers directory:
+   ```
+   cd workers
+   ```
+
+4. Set environment secrets:
+   ```
+   wrangler secret put SUPABASE_URL
+   # Paste your Supabase Project URL
+
+   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+   # Paste your Supabase service_role key
+
+   wrangler secret put JWT_SECRET
+   # Generate a strong random secret:  $(openssl rand -base64 32)
+   ```
+
+5. Update wrangler.toml:
+   - Edit the JWT_ISSUER variable to match your worker URL
+   - Example: JWT_ISSUER = "https://auth-agent.your-subdomain.workers.dev"
+
+6. Deploy the worker:
+   ```
+   wrangler deploy
+   ```
+
+7. Note your worker URL (e.g., https://auth-agent-workers.your-subdomain.workers.dev)
+
+8. (OPTIONAL) Set up Custom Domain:
+   - Go to Cloudflare Dashboard > Workers & Pages
+   - Select your worker (auth-agent-workers)
+   - Click "Settings" > "Domains & Routes"
+   - Click "Add Custom Domain"
+   - Enter your domain (e.g., api.auth-agent.com)
+   - Follow DNS setup instructions (Cloudflare handles this automatically if using Cloudflare DNS)
+   - Update JWT_ISSUER in wrangler.toml to your custom domain:
+     JWT_ISSUER = "https://api.auth-agent.com"
+   - Redeploy: wrangler deploy
+
+================================================================================
+STEP 3: UPDATE THE SDK
+================================================================================
+
+The SDK automatically detects the backend URL from authorization requests.
+
+1. Find the SDK file: sdk/agent/auth_agent_agent_sdk.py
+
+2. NO CHANGES NEEDED! The SDK dynamically extracts the server URL from the
+   authorization URL, so it works with both:
+   - Worker URL: https://auth-agent-workers.your-subdomain.workers.dev
+   - Custom domain: https://api.auth-agent.com
+
+3. The API endpoints remain the same!
+
+================================================================================
+STEP 4: UPDATE THE WEBSITE
+================================================================================
+
+1. Navigate to website configuration:
+   ```
+   cd website/apps/web
+   ```
+
+2. Update the .env file:
+   ```
+   NEXT_PUBLIC_SERVER_URL=https://auth-agent-workers.your-subdomain.workers.dev
+   # Or if using custom domain:
+   NEXT_PUBLIC_SERVER_URL=https://api.auth-agent.com
+
+   # Add Supabase credentials for website features:
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+3. If deploying to Vercel, update environment variables in Vercel Dashboard:
+   - Go to Project Settings > Environment Variables
+   - Update NEXT_PUBLIC_SERVER_URL
+   - Update NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+4. Redeploy the website (Vercel will auto-deploy on git push)
+
+================================================================================
+STEP 5: MIGRATE EXISTING DATA (OPTIONAL)
+================================================================================
+
+If you have existing clients and agents in Convex that you want to migrate:
+
+1. Export data from Convex dashboard:
+   - Go to https://dashboard.convex.dev
+   - Export clients and agents tables
+
+2. Import into Supabase:
+   - Use Supabase SQL Editor or their import tool
+   - NOTE: You'll need to re-hash secrets as the hashing may differ
+
+RECOMMENDED: Start fresh with new clients/agents for a clean migration.
+
+================================================================================
+STEP 6: TEST THE MIGRATION
+================================================================================
+
+1. Create a test client:
+   ```
+   curl -X POST https://your-worker-url.workers.dev/api/admin/clients \
+     -H "Content-Type: application/json" \
+     -d '{
+       "client_id": "test_client",
+       "client_name": "Test Client",
+       "redirect_uris": ["http://localhost:3000/callback"]
+     }'
+   ```
+   Save the client_secret!
+
+2. Create a test agent:
+   ```
+   curl -X POST https://your-worker-url.workers.dev/api/admin/agents \
+     -H "Content-Type: application/json" \
+     -d '{
+       "agent_id": "test_agent",
+       "user_email": "test@example.com",
+       "user_name": "Test Agent"
+     }'
+   ```
+   Save the agent_secret!
+
+3. Test OAuth flow:
+   - Use the SDK with the test agent credentials
+   - Initiate an OAuth flow
+   - Verify it completes successfully
+
+4. Check Supabase Tables:
+   - Go to Supabase Table Editor
+   - Verify data is being created in: clients, agents, auth_requests, tokens
+
+================================================================================
+STEP 7: CLEANUP (AFTER SUCCESSFUL MIGRATION)
+================================================================================
+
+1. Once everything is working on Cloudflare Workers + Supabase:
+   - You can archive the Convex project
+   - Remove the convex/ directory from your codebase
+   - Update any documentation referencing Convex
+
+2. Monitor your new infrastructure:
+   - Cloudflare Workers dashboard for request metrics
+   - Supabase dashboard for database performance
+
+================================================================================
+KEY DIFFERENCES FROM CONVEX
+================================================================================
+
+1. Database:
+   - Convex: NoSQL-like document database
+   - Supabase: PostgreSQL (relational SQL database)
+
+2. Backend:
+   - Convex: Serverless functions with built-in database
+   - Cloudflare Workers: Edge functions + separate Supabase database
+
+3. Performance:
+   - Cloudflare Workers: Deployed globally on Cloudflare's edge network
+   - Supabase: Database region can be chosen during setup
+
+4. Pricing:
+   - Cloudflare Workers: 100,000 requests/day free
+   - Supabase: Free tier with 500MB database
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Issue: "Failed to connect to Supabase"
+Solution: Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are correct
+
+Issue: "Invalid JWT"
+Solution: Ensure JWT_SECRET is set and matches across all requests
+
+Issue: "CORS errors"
+Solution: CORS is enabled by default in the worker, check browser console
+
+Issue: "Table not found"
+Solution: Make sure you ran the full schema.sql in Supabase
+
+For more help, check:
+- Cloudflare Workers docs: https://developers.cloudflare.com/workers/
+- Supabase docs: https://supabase.com/docs
+- Create an issue on GitHub
+
+================================================================================

@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth-Agent - OAuth 2.1 Authentication for AI Agents</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0a0a0a;
+            overflow-x: hidden;
+        }
+
+        /* Animated Orange Dots Background */
+        .dots-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: #f97316;
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+            opacity: 0.3;
+        }
+
+        .dot:nth-child(2n) {
+            animation-delay: -2s;
+            animation-duration: 8s;
+        }
+
+        .dot:nth-child(3n) {
+            animation-delay: -4s;
+            animation-duration: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) translateX(0px);
+                opacity: 0.3;
+            }
+            25% {
+                transform: translateY(-20px) translateX(10px);
+                opacity: 0.6;
+            }
+            50% {
+                transform: translateY(-10px) translateX(-15px);
+                opacity: 0.4;
+            }
+            75% {
+                transform: translateY(-30px) translateX(5px);
+                opacity: 0.7;
+            }
+        }
+
+        /* Content styling */
+        .content {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Code block animations */
+        .code-block {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+
+        .code-block.animate {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Glow effect for buttons */
+        .glow-button {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glow-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .glow-button:hover::before {
+            left: 100%;
+        }
+
+        /* Typewriter effect */
+        .typewriter {
+            overflow: hidden;
+            border-right: 2px solid #f97316;
+            white-space: nowrap;
+            animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
+
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #f97316 }
+        }
+
+        /* Fade in animation */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease-out;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-black text-white">
+    <!-- Animated Dots Background -->
+    <div class="dots-container" id="dotsContainer"></div>
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-orange-500/20">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Auth-Agent</h1>
+                        <p class="text-xs text-orange-400">OAuth 2.1 for AI Agents</p>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="text-gray-300 hover:text-orange-400 transition-colors">Features</a>
+                    <a href="#how-it-works" class="text-gray-300 hover:text-orange-400 transition-colors">How It Works</a>
+                    <a href="#documentation" class="text-gray-300 hover:text-orange-400 transition-colors">Docs</a>
+                    <a href="https://github.com/yourusername/Auth_Agent_YC" target="_blank" class="text-gray-300 hover:text-orange-400 transition-colors">GitHub</a>
+                </nav>
+
+                <!-- CTA Buttons -->
+                <div class="flex items-center space-x-4">
+                    <a href="auth.html" class="text-gray-300 hover:text-orange-400 transition-colors">Sign In</a>
+                    <a href="auth.html" class="bg-orange-500 text-black px-4 py-2 rounded-lg font-semibold hover:bg-orange-400 transition-colors">
+                        Get Started
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="content">
+        <!-- Hero Section -->
+        <section class="min-h-screen flex flex-col items-center justify-center px-4 pt-20">
+            <div class="text-center max-w-4xl mx-auto">
+                <h1 class="text-6xl md:text-8xl font-bold mb-8 typewriter">
+                    OAuth 2.1 for AI Agents
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-300 mb-6 fade-in">
+                    Industry-standard authentication protocol for AI agents and websites
+                </p>
+                <p class="text-lg text-gray-400 mb-12 fade-in">
+                    The same OAuth flow used by Google, GitHub, and Microsoft—now optimized for AI agents
+                </p>
+                <div class="flex flex-col sm:flex-row gap-6 justify-center fade-in">
+                    <a href="auth.html" class="glow-button px-12 py-4 bg-orange-500 text-black font-bold text-lg rounded-lg hover:bg-orange-400 transition-all duration-300 text-center shadow-lg hover:shadow-orange-500/25">
+                        Get Started Free
+                    </a>
+                    <a href="console.html" class="px-12 py-4 border-2 border-orange-500 text-orange-500 font-bold text-lg rounded-lg hover:bg-orange-500 hover:text-black transition-all duration-300 text-center">
+                        Developer Console
+                    </a>
+                </div>
+                
+                <div class="mt-8 fade-in">
+                    <p class="text-gray-400 text-sm">
+                        No credit card required • Production-ready OAuth 2.1 + OIDC
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- What is Auth-Agent Section -->
+        <section id="features" class="py-20 px-4 bg-gray-900/30">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6 fade-in">
+                        What is Auth-Agent?
+                    </h2>
+                    <p class="text-xl text-gray-300 fade-in max-w-3xl mx-auto">
+                        Auth-Agent is a complete <strong>OAuth 2.1 + OIDC</strong> implementation designed for AI agents.
+                        It enables AI agents to securely authenticate with websites using the Authorization Code Flow with PKCE—the same standard used by major platforms like Google, GitHub, and Slack.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-8 mb-12">
+                    <div class="fade-in bg-gray-800/50 p-6 rounded-lg">
+                        <h3 class="text-2xl font-semibold mb-3 text-orange-400">OAuth 2.1</h3>
+                        <p class="text-gray-300">
+                            Latest OAuth specification with mandatory PKCE, enhanced security, and simplified flow
+                        </p>
+                    </div>
+
+                    <div class="fade-in bg-gray-800/50 p-6 rounded-lg">
+                        <h3 class="text-2xl font-semibold mb-3 text-orange-400">2FA Support</h3>
+                        <p class="text-gray-300">
+                            Optional two-factor authentication with AgentMail for enhanced agent security
+                        </p>
+                    </div>
+
+                    <div class="fade-in bg-gray-800/50 p-6 rounded-lg">
+                        <h3 class="text-2xl font-semibold mb-3 text-orange-400">Serverless Backend</h3>
+                        <p class="text-gray-300">
+                            Built on Convex for zero-config serverless deployment with real-time capabilities
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- For AI Agents Section -->
+        <section class="py-20 px-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6 fade-in">
+                        For AI Agents
+                    </h2>
+                    <p class="text-xl text-gray-300 fade-in">
+                        Authenticate with any website using our Python SDK
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="fade-in">
+                        <h3 class="text-2xl font-semibold mb-4 text-orange-500">OAuth 2.1 + PKCE</h3>
+                        <p class="text-gray-300 mb-6">
+                            Our Python SDK implements the complete OAuth 2.1 Authorization Code Flow with PKCE (Proof Key for Code Exchange).
+                            It automatically handles PKCE generation, state validation, token exchange, and token refresh—everything you need for secure authentication.
+                        </p>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                Automatic PKCE generation (SHA-256)
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                Agent-based authentication (agent_id + agent_secret)
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                Optional 2FA with AgentMail
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                Browser automation support (browser-use)
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="code-block">
+                        <pre class="bg-gray-900 rounded-lg p-6 overflow-x-auto"><code class="language-python">from auth_agent_agent_sdk import AuthAgentAgentSDK
+
+# Initialize SDK with agent credentials
+sdk = AuthAgentAgentSDK(
+    agent_id="your_agent_id",
+    agent_secret="your_agent_secret",
+    model="gpt-4"
+)
+
+# Extract request_id from authorization page
+request_id = await sdk.extract_request_id_async(auth_url)
+
+# Authenticate the agent
+auth_result = await sdk.authenticate_async(request_id, auth_url)
+
+# If 2FA is required
+if auth_result.get('requires_2fa'):
+    # Get code from AgentMail inbox
+    code = get_2fa_code_from_email()
+    # Verify 2FA
+    await sdk.verify_2fa_async(request_id, code, auth_url)
+
+# Wait for authorization code
+status = await sdk.wait_for_authentication_async(
+    request_id, auth_url
+)
+print(f"Authorization code: {status['code']}")
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- For Websites Section -->
+        <section class="py-20 px-4 bg-gray-900/50">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6 fade-in">
+                        For Websites
+                    </h2>
+                    <p class="text-xl text-gray-300 fade-in">
+                        Add "Login with AI Agent" using standard OAuth 2.1
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="code-block">
+                        <pre class="bg-gray-900 rounded-lg p-6 overflow-x-auto"><code class="language-javascript">// PKCE Generation
+async function generatePKCE() {
+  const verifier = base64UrlEncode(
+    crypto.getRandomValues(new Uint8Array(32))
+  );
+  const challenge = base64UrlEncode(
+    await crypto.subtle.digest('SHA-256',
+      new TextEncoder().encode(verifier))
+  );
+  return { verifier, challenge };
+}
+
+// Start OAuth Flow
+async function startOAuth() {
+  const { verifier, challenge } = await generatePKCE();
+  const state = crypto.randomUUID();
+
+  sessionStorage.setItem('oauth_state', state);
+  sessionStorage.setItem('code_verifier', verifier);
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: 'YOUR_CLIENT_ID',
+    redirect_uri: window.location.origin + '/callback',
+    scope: 'openid profile email agent',
+    state: state,
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
+  });
+
+  window.location.href =
+    `https://auth-agent.com/authorize?${params}`;
+}
+</code></pre>
+                    </div>
+
+                    <div class="fade-in">
+                        <h3 class="text-2xl font-semibold mb-4 text-orange-500">Standard OAuth 2.1 Integration</h3>
+                        <p class="text-gray-300 mb-6">
+                            If you've integrated Google Sign-In or GitHub OAuth, you already know how to use Auth-Agent.
+                            It's the exact same Authorization Code Flow with PKCE that you're familiar with—no proprietary protocols or custom implementations.
+                        </p>
+                        <ul class="space-y-2 text-gray-300">
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                Standard OAuth 2.1 endpoints
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                OIDC discovery document
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                JWT ID tokens with agent claims
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
+                                Token introspection endpoint
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- OAuth Flow Diagram -->
+        <section id="how-it-works" class="py-20 px-4">
+            <div class="max-w-6xl mx-auto text-center">
+                <h2 class="text-4xl md:text-5xl font-bold mb-12 fade-in">
+                    OAuth 2.1 Authorization Code Flow
+                </h2>
+
+                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-8 max-w-5xl mx-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                        <!-- AI Agent -->
+                        <div class="text-center">
+                            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 mb-4 shadow-lg border border-orange-400/30">
+                                <div class="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-400/30">
+                                    <svg class="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-white font-bold text-lg">AI Agent</h3>
+                                <p class="text-orange-100 text-sm">Python SDK</p>
+                            </div>
+                            <div class="space-y-2 text-sm text-gray-300">
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">1. Extract request_id</div>
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">3. Authenticate</div>
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">5. Verify 2FA (if enabled)</div>
+                            </div>
+                        </div>
+
+                        <!-- Auth-Agent Server -->
+                        <div class="text-center">
+                            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 mb-4 shadow-lg border border-orange-400/30">
+                                <div class="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-400/30">
+                                    <svg class="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-white font-bold text-lg">Auth-Agent</h3>
+                                <p class="text-orange-100 text-sm">OAuth 2.1 Server</p>
+                            </div>
+                            <div class="space-y-2 text-sm text-gray-300">
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">2. Store request</div>
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">4. Send 2FA code</div>
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">6. Issue auth code</div>
+                            </div>
+                        </div>
+
+                        <!-- Website -->
+                        <div class="text-center">
+                            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 mb-4 shadow-lg border border-orange-400/30">
+                                <div class="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-400/30">
+                                    <svg class="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-white font-bold text-lg">Website</h3>
+                                <p class="text-orange-100 text-sm">OAuth Client</p>
+                            </div>
+                            <div class="space-y-2 text-sm text-gray-300">
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">7. Exchange code</div>
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">8. Get user info</div>
+                                <div class="bg-black/50 border border-orange-500/20 rounded-lg p-3">9. Create session</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Flow Arrows -->
+                    <div class="mt-8 space-y-4">
+                        <div class="flex items-center justify-center space-x-4">
+                            <div class="flex-1 h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent"></div>
+                            <div class="bg-orange-500 text-black px-3 py-1 rounded-full text-xs font-medium">PKCE Challenge</div>
+                            <div class="flex-1 h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent"></div>
+                        </div>
+                        <div class="flex items-center justify-center space-x-4">
+                            <div class="flex-1 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent"></div>
+                            <div class="bg-orange-400 text-black px-3 py-1 rounded-full text-xs font-medium">Authorization Code</div>
+                            <div class="flex-1 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent"></div>
+                        </div>
+                        <div class="flex items-center justify-center space-x-4">
+                            <div class="flex-1 h-px bg-gradient-to-r from-transparent via-orange-600 to-transparent"></div>
+                            <div class="bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-medium">Access Token</div>
+                            <div class="flex-1 h-px bg-gradient-to-r from-transparent via-orange-600 to-transparent"></div>
+                        </div>
+                    </div>
+
+                    <!-- Security Features -->
+                    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-black/50 border border-orange-500/20 rounded-lg p-4 text-center">
+                            <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                            </div>
+                            <h4 class="text-white font-semibold text-sm">PKCE Protection</h4>
+                            <p class="text-gray-400 text-xs">Prevents code interception</p>
+                        </div>
+                        <div class="bg-black/50 border border-orange-500/20 rounded-lg p-4 text-center">
+                            <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                            </div>
+                            <h4 class="text-white font-semibold text-sm">State Validation</h4>
+                            <p class="text-gray-400 text-xs">CSRF protection</p>
+                        </div>
+                        <div class="bg-black/50 border border-orange-500/20 rounded-lg p-4 text-center">
+                            <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                            <h4 class="text-white font-semibold text-sm">JWT Tokens</h4>
+                            <p class="text-gray-400 text-xs">Secure & stateless</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="py-20 px-4 bg-gray-900/30">
+            <div class="max-w-6xl mx-auto text-center">
+                <h2 class="text-4xl md:text-5xl font-bold mb-16 fade-in">
+                    Why OAuth 2.1?
+                </h2>
+
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="fade-in">
+                        <div class="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-4">Industry Standard</h3>
+                        <p class="text-gray-300">Same protocol as Google, GitHub, and Microsoft. No proprietary implementations.</p>
+                    </div>
+
+                    <div class="fade-in">
+                        <div class="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-4">PKCE Mandatory</h3>
+                        <p class="text-gray-300">Proof Key for Code Exchange prevents authorization code interception attacks.</p>
+                    </div>
+
+                    <div class="fade-in">
+                        <div class="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-4">OIDC Support</h3>
+                        <p class="text-gray-300">ID tokens with JWT, UserInfo endpoint, and OpenID Connect discovery.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="py-20 px-4">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="text-4xl md:text-5xl font-bold mb-6 fade-in">
+                    Ready to Get Started?
+                </h2>
+                <p class="text-xl text-gray-300 mb-12 fade-in">
+                    Join thousands of developers using Auth-Agent for secure AI agent authentication
+                </p>
+                <div class="flex flex-col sm:flex-row gap-6 justify-center fade-in">
+                    <a href="auth.html" class="glow-button px-12 py-4 bg-orange-500 text-black font-bold text-lg rounded-lg hover:bg-orange-400 transition-all duration-300 text-center shadow-lg hover:shadow-orange-500/25">
+                        Get Started Free
+                    </a>
+                    <a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/INTEGRATION_GUIDE.md" target="_blank" class="px-12 py-4 border-2 border-orange-500 text-orange-500 font-bold text-lg rounded-lg hover:bg-orange-500 hover:text-black transition-all duration-300 text-center">
+                        View Documentation
+                    </a>
+                </div>
+                <div class="mt-8 fade-in">
+                    <p class="text-gray-400 text-sm">
+                        Free tier available • No setup fees • Production-ready infrastructure
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="py-12 px-4 border-t border-gray-800">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid md:grid-cols-4 gap-8 mb-8">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-orange-400">Product</h3>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="console.html" class="hover:text-orange-500 transition-colors">Developer Console</a></li>
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2" target="_blank" class="hover:text-orange-500 transition-colors">GitHub</a></li>
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/PRODUCTION_READINESS.md" target="_blank" class="hover:text-orange-500 transition-colors">Roadmap</a></li>
+                        </ul>
+                    </div>
+                    <div id="documentation">
+                        <h3 class="text-lg font-semibold mb-4 text-orange-400">Documentation</h3>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/quickstart.mdx" target="_blank" class="hover:text-orange-500 transition-colors">Quickstart</a></li>
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/INTEGRATION_GUIDE.md" target="_blank" class="hover:text-orange-500 transition-colors">Integration Guide</a></li>
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/api/endpoints.mdx" target="_blank" class="hover:text-orange-500 transition-colors">API Reference</a></li>
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/api/authentication.mdx" target="_blank" class="hover:text-orange-500 transition-colors">Security Guide</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-orange-400">Resources</h3>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/sdk/python.mdx" target="_blank" class="hover:text-orange-500 transition-colors">Python SDK</a></li>
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/blob/main/docs/sdk/examples.mdx" target="_blank" class="hover:text-orange-500 transition-colors">Code Examples</a></li>
+                            <li><a href="https://github.com/hetpatel-11/Auth-Agent2/issues" target="_blank" class="hover:text-orange-500 transition-colors">GitHub Issues</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4 text-orange-400">Support</h3>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="mailto:support@auth-agent.com" class="hover:text-orange-500 transition-colors">Email Support</a></li>
+                            <li><a href="https://discord.gg/auth-agent" target="_blank" class="hover:text-orange-500 transition-colors">Discord Community</a></li>
+                            <li><a href="https://twitter.com/authagenthq" target="_blank" class="hover:text-orange-500 transition-colors">Twitter</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="text-center pt-8 border-t border-gray-800">
+                    <p class="text-gray-400">© 2024 Auth-Agent. OAuth 2.1 + OIDC authentication for AI agents.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Create animated dots
+        function createDots() {
+            const container = document.getElementById('dotsContainer');
+            const dotCount = 50;
+
+            for (let i = 0; i < dotCount; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.style.left = Math.random() * 100 + '%';
+                dot.style.top = Math.random() * 100 + '%';
+                dot.style.animationDelay = Math.random() * 6 + 's';
+                container.appendChild(dot);
+            }
+        }
+
+        // Intersection Observer for animations
+        function setupAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate', 'visible');
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            // Observe all elements that need animation
+            document.querySelectorAll('.fade-in, .code-block').forEach(el => {
+                observer.observe(el);
+            });
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            createDots();
+            setupAnimations();
+        });
+
+        // Add some interactive effects
+        document.addEventListener('mousemove', (e) => {
+            const dots = document.querySelectorAll('.dot');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+
+            dots.forEach((dot, index) => {
+                const speed = (index % 3 + 1) * 0.5;
+                const xOffset = (x - 0.5) * speed * 20;
+                const yOffset = (y - 0.5) * speed * 20;
+
+                dot.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+            });
+        });
+    </script>
+</body>
+</html>
