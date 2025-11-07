@@ -145,55 +145,165 @@ sequenceDiagram
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### For AI Agent Developers
+
+Add Auth Agent authentication to your AI agents in 3 steps:
+
+#### 1. Install the SDK
 
 ```bash
-npm install
+# Python (browser-use integration)
+pip install aiohttp python-dotenv browser-use
+
+# Get the Auth Agent tools
+cd Auth_Agent/examples/browser-use-integration
 ```
 
-### 2. Configure Environment Variables
+#### 2. Get Your Agent Credentials
 
-**⚠️ Important:** All `.env*` files are gitignored. You need to create your own `.env` files from the provided `.env.example` templates.
+**🔴 TODO:** We're building a self-service console website where you can register and get credentials instantly!
 
-```bash
-# Copy environment variable template
-cp .env.example .env
+**Coming Soon:** `console.auth-agent.com` - Sign up, create agents, manage credentials
 
-# Edit .env with your actual credentials
-# See Configuration section below for details
+For now, contact us or use the admin API to create an agent.
+
+#### 3. Authenticate on Any Website
+
+```python
+import os
+from auth_agent_authenticate import AuthAgentTools
+from browser_use import Agent, ChatBrowserUse
+
+# Initialize with your credentials
+tools = AuthAgentTools(
+    agent_id=os.getenv('AGENT_ID'),
+    agent_secret=os.getenv('AGENT_SECRET'),
+    model='gpt-4'
+)
+
+# Create authentication task
+task = (
+    "Go to the website and click 'Sign in with Auth Agent'. "
+    "When the spinning authentication page appears, "
+    "use the authenticate_with_auth_agent tool to complete authentication."
+)
+
+# Run your agent
+agent = Agent(task=task, llm=ChatBrowserUse(), tools=tools)
+await agent.run()
 ```
 
-### 3. Deploy to Cloudflare Workers
+**See full example:** [`Auth_Agent/examples/browser-use-integration/example.py`](./Auth_Agent/examples/browser-use-integration/example.py)
 
-```bash
-# Install Wrangler CLI if you haven't
-npm install -g wrangler
+---
 
-# Login to Cloudflare
-npx wrangler login
+### For Website Developers
 
-# Deploy
-npx wrangler deploy
+Add "Sign in with Auth Agent" button to your website in 3 steps:
+
+#### 1. Get OAuth Client Credentials
+
+**🔴 TODO:** We're building a self-service console website where you can register and get credentials instantly!
+
+**Coming Soon:** `console.auth-agent.com` - Sign up, register clients, configure redirect URIs
+
+For now, contact us or use the admin API to create a client.
+
+#### 2. Add the Auth Agent Button
+
+```typescript
+// components/AuthAgentButton.tsx
+export function AuthAgentButton() {
+  const handleSignIn = async () => {
+    // Generate PKCE challenge
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+    sessionStorage.setItem('code_verifier', codeVerifier);
+
+    // Redirect to Auth Agent authorization
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
+      redirect_uri: `${window.location.origin}/api/auth/callback`,
+      response_type: 'code',
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      state: crypto.randomUUID(),
+    });
+
+    window.location.href =
+      `https://api.auth-agent.com/authorize?${params}`;
+  };
+
+  return (
+    <button
+      onClick={handleSignIn}
+      className="flex items-center gap-3 rounded-lg
+                 bg-gradient-to-r from-orange-500 to-orange-600
+                 px-6 py-3 text-white shadow-xl
+                 hover:from-orange-600 hover:to-orange-700"
+    >
+      <img src="/auth-agent-logo.png" className="h-6 w-6" />
+      Sign in with Auth Agent
+    </button>
+  );
+}
 ```
 
-### 4. Seed Test Data
+#### 3. Handle the OAuth Callback
 
-```bash
-npm run seed
+```typescript
+// app/api/auth/callback/route.ts
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get('code');
+  const codeVerifier = sessionStorage.getItem('code_verifier');
+
+  // Exchange authorization code for tokens
+  const response = await fetch('https://api.auth-agent.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: codeVerifier,
+      client_id: process.env.CLIENT_ID,
+      client_secret: process.env.CLIENT_SECRET,
+    }),
+  });
+
+  const { access_token, refresh_token } = await response.json();
+
+  // Store tokens securely and redirect to dashboard
+  // ... your session management logic
+}
 ```
 
-This creates:
-- A test agent with credentials
-- A test client (website)
-- Saves credentials to `test-credentials.json`
+**See full example:** [`Auth_Agent/website`](./Auth_Agent/website) (Profilio integration example)
 
-### 5. Test the Flow
+---
 
-```bash
-npm test
-```
+## 📋 TODO: Self-Service Console Website
 
-Runs a complete OAuth flow simulation.
+We're actively building a user-friendly console where both AI agent developers and website owners can self-register:
+
+### For Agent Developers:
+- ✅ Sign up with Google/GitHub/Email
+- ✅ Create and manage AI agent credentials
+- ✅ View usage statistics
+- ✅ Regenerate secrets
+- ✅ Test authentication flows
+
+### For Website Owners:
+- ✅ Sign up with Google/GitHub/Email
+- ✅ Register OAuth clients
+- ✅ Configure redirect URIs
+- ✅ View authentication logs
+- ✅ Manage API keys
+
+**Coming Soon:** Visit `console.auth-agent.com` to get started!
+
+**Current Status:** Authentication system complete, building dashboards now.
 
 ## 📚 Documentation
 
