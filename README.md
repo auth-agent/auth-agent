@@ -165,7 +165,7 @@ cd Auth_Agent/examples/browser-use-integration
 
 **Coming Soon:** `console.auth-agent.com` - Sign up, create agents, manage credentials
 
-For now, contact us or use the admin API to create an agent.
+**For now, please contact us** to get agent credentials. Admin endpoints are restricted for security.
 
 #### 3. Authenticate on Any Website
 
@@ -207,7 +207,7 @@ Add "Sign in with Auth Agent" button to your website in 3 steps:
 
 **Coming Soon:** `console.auth-agent.com` - Sign up, register clients, configure redirect URIs
 
-For now, contact us or use the admin API to create a client.
+**For now, please contact us** to get OAuth client credentials. Admin endpoints are restricted for security.
 
 #### 2. Add the Auth Agent Button
 
