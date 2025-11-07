@@ -10,7 +10,7 @@ dist/
 
 # Test credentials (contains secrets!)
 test-credentials.json
-
+Auth_Agent_Website/
 # Logs
 *.log
 npm-debug.log*
