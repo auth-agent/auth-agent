@@ -21,20 +21,10 @@ A specialized OAuth 2.1 authorization server designed for Web Agents and Compute
 
 Watch Auth Agent in action:
 
-### Demo 1: Profilio Integration
-AI agent authenticating on Profilio platform using browser-use.
+### Demo: Profilio Website Integration
+AI agent authenticating on Profilio platform using browser-use agent.
 
 ![Profilio Demo](./demo/gif/Profilio.gif)
-
-### Demo 2: Crypto Exchange Dashboard
-Authentication flow on crypto trading platform.
-
-![Crypto Exchange Demo](./demo/gif/Crypto_Website_Demo.gif)
-
-### Demo 3: GitHub Clone Website
-Full OAuth flow on GitHub-style repository dashboard.
-
-![GitHub Clone Demo](./demo/gif/Github_Replica_Website_Demo.gif)
 
 ## ✨ Features
 
