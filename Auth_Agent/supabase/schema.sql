@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS auth_requests (
     authenticated BOOLEAN NOT NULL DEFAULT FALSE,
     authorization_code TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '10 minutes')
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '2 minutes')
 );
 
 -- Authorization Codes

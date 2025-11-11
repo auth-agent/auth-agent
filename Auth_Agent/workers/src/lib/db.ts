@@ -211,6 +211,7 @@ export async function getAuthRequest(db: SupabaseClient, requestId: string): Pro
     .from('auth_requests')
     .select('*')
     .eq('request_id', requestId)
+    .gt('expires_at', new Date().toISOString())
     .single();
 
   if (error || !data) return null;

@@ -111,35 +111,26 @@ app.get('/authorize', async (c) => {
 app.post('/token', async (c) => {
   try {
     const body = await c.req.json();
-    const { grant_type, code, code_verifier, redirect_uri, client_id, client_secret } = body;
+    const { grant_type, code, code_verifier, redirect_uri, client_id, client_secret, refresh_token } = body;
 
     // Validate grant type
-    if (grant_type !== 'authorization_code') {
+    if (grant_type !== 'authorization_code' && grant_type !== 'refresh_token') {
       return c.json({
         error: 'unsupported_grant_type',
-        error_description: 'Only authorization_code grant is supported',
-      }, 400);
-    }
-
-    // Validate required parameters
-    if (!code || !code_verifier || !redirect_uri || !client_id || !client_secret) {
-      return c.json({
-        error: 'invalid_request',
-        error_description: 'Missing required parameters',
-      }, 400);
-    }
-
-    // Validate redirect_uri format
-    if (!validation.isValidRedirectUri(redirect_uri)) {
-      return c.json({
-        error: 'invalid_request',
-        error_description: 'Invalid redirect_uri format. HTTPS is required (HTTP allowed only for localhost)',
+        error_description: 'Only authorization_code and refresh_token grants are supported',
       }, 400);
     }
 
     const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY);
 
     // Verify client credentials
+    if (!client_id || !client_secret) {
+      return c.json({
+        error: 'invalid_request',
+        error_description: 'Missing client_id or client_secret',
+      }, 400);
+    }
+
     const client = await db.getClient(supabase, client_id);
     if (!client) {
       return c.json({
@@ -156,70 +147,131 @@ app.post('/token', async (c) => {
       }, 401);
     }
 
-    // Get authorization code
-    const authCode = await db.getAuthCode(supabase, code);
-    if (!authCode) {
-      return c.json({
-        error: 'invalid_grant',
-        error_description: 'Invalid or expired authorization code',
-      }, 400);
+    let agentId: string;
+    let clientId: string;
+    let model: string;
+    let scope: string;
+
+    if (grant_type === 'authorization_code') {
+      // Authorization code grant flow
+      if (!code || !code_verifier || !redirect_uri) {
+        return c.json({
+          error: 'invalid_request',
+          error_description: 'Missing required parameters: code, code_verifier, redirect_uri',
+        }, 400);
+      }
+
+      // Validate redirect_uri format
+      if (!validation.isValidRedirectUri(redirect_uri)) {
+        return c.json({
+          error: 'invalid_request',
+          error_description: 'Invalid redirect_uri format. HTTPS is required (HTTP allowed only for localhost)',
+        }, 400);
+      }
+
+      // Get authorization code
+      const authCode = await db.getAuthCode(supabase, code);
+      if (!authCode) {
+        return c.json({
+          error: 'invalid_grant',
+          error_description: 'Invalid or expired authorization code',
+        }, 400);
+      }
+
+      // Verify PKCE
+      const pkceValid = await crypto.validatePKCE(code_verifier, authCode.code_challenge, 'S256');
+      if (!pkceValid) {
+        return c.json({
+          error: 'invalid_grant',
+          error_description: 'Invalid code_verifier',
+        }, 400);
+      }
+
+      // Verify redirect_uri matches
+      if (authCode.redirect_uri !== redirect_uri) {
+        return c.json({
+          error: 'invalid_grant',
+          error_description: 'redirect_uri mismatch',
+        }, 400);
+      }
+
+      agentId = authCode.agent_id;
+      clientId = authCode.client_id;
+      model = authCode.model;
+      scope = authCode.scope;
+
+      // Mark auth code as used
+      await db.markAuthCodeUsed(supabase, code);
+    } else {
+      // Refresh token grant flow
+      if (!refresh_token) {
+        return c.json({
+          error: 'invalid_request',
+          error_description: 'Missing required parameter: refresh_token',
+        }, 400);
+      }
+
+      // Get token by refresh token
+      const tokenRecord = await db.getTokenByRefreshToken(supabase, refresh_token);
+      if (!tokenRecord) {
+        return c.json({
+          error: 'invalid_grant',
+          error_description: 'Invalid or expired refresh token',
+        }, 400);
+      }
+
+      // Verify client_id matches
+      if (tokenRecord.client_id !== client_id) {
+        return c.json({
+          error: 'invalid_grant',
+          error_description: 'Refresh token does not belong to this client',
+        }, 400);
+      }
+
+      agentId = tokenRecord.agent_id;
+      clientId = tokenRecord.client_id;
+      model = tokenRecord.model;
+      scope = tokenRecord.scope;
+
+      // Revoke old tokens (rotation)
+      await db.revokeToken(supabase, refresh_token);
     }
 
-    // Verify PKCE
-    const pkceValid = await crypto.validatePKCE(code_verifier, authCode.code_challenge, 'S256');
-    if (!pkceValid) {
-      return c.json({
-        error: 'invalid_grant',
-        error_description: 'Invalid code_verifier',
-      }, 400);
-    }
-
-    // Verify redirect_uri matches
-    if (authCode.redirect_uri !== redirect_uri) {
-      return c.json({
-        error: 'invalid_grant',
-        error_description: 'redirect_uri mismatch',
-      }, 400);
-    }
-
-    // Generate tokens
+    // Generate new tokens
     const tokenId = `tok_${await crypto.generateSecureRandom(16)}`;
     const refreshTokenValue = `rt_${await crypto.generateSecureRandom(32)}`;
     const accessTokenExpiresAt = new Date(Date.now() + CONFIG.ACCESS_TOKEN_TTL * 1000);
     const refreshTokenExpiresAt = new Date(Date.now() + CONFIG.REFRESH_TOKEN_TTL * 1000);
 
     const accessToken = await crypto.generateJWT({
-      agentId: authCode.agent_id,
-      clientId: authCode.client_id,
-      model: authCode.model,
-      scope: authCode.scope,
+      agentId,
+      clientId,
+      model,
+      scope,
       expiresIn: CONFIG.ACCESS_TOKEN_TTL,
       issuer: getBaseUrl(c),
       secret: c.env.JWT_SECRET,
     });
 
-    // Store tokens
+    // Store new tokens
     await db.createToken(supabase, {
       token_id: tokenId,
       access_token: accessToken,
       refresh_token: refreshTokenValue,
-      agent_id: authCode.agent_id,
-      client_id: authCode.client_id,
-      model: authCode.model,
-      scope: authCode.scope,
+      agent_id: agentId,
+      client_id: clientId,
+      model,
+      scope,
       access_token_expires_at: accessTokenExpiresAt,
       refresh_token_expires_at: refreshTokenExpiresAt,
     });
-
-    // Mark auth code as used
-    await db.markAuthCodeUsed(supabase, code);
 
     return c.json({
       access_token: accessToken,
       token_type: 'Bearer',
       expires_in: CONFIG.ACCESS_TOKEN_TTL,
       refresh_token: refreshTokenValue,
-      scope: authCode.scope,
+      scope,
     });
   } catch (error: any) {
     console.error('Token exchange error:', error);
