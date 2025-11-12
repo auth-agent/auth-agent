@@ -192,7 +192,7 @@ if (existingUser) {
 
 ---
 
-### Scenario 2: Fresh Agent Profile WITH User Context 🎨
+### Scenario 2: Fresh Agent Profile WITH User Context 
 
 **When to use:** User wants agent to have its own space but benefit from their history (e.g., personalized recommendations, saved preferences)
 
@@ -247,7 +247,7 @@ if (existingUser) {
 
 ---
 
-### Scenario 3: Fresh Agent Profile WITHOUT Context 🆕
+### Scenario 3: Fresh Agent Profile WITHOUT Context 
 
 **When to use:** First-time user or user wants completely fresh agent experience (e.g., testing new website, privacy-focused usage)
 
