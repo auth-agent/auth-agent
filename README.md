@@ -31,6 +31,8 @@ AI agent authenticating on Profilio platform using browser-use agent.
 - **🔐 OAuth 2.1 Compliant** - Full implementation with PKCE required
 - **🤖 AI Agent Authentication** - Agents authenticate using `agent_id` + `agent_secret`
 - **⚡ No User Consent** - Streamlined for autonomous agents (consent handled during onboarding)
+- **👤 User Context Awareness** - `/userinfo` endpoint enables websites to link agents to user accounts
+- **🎯 Three Integration Scenarios** - Full account access, contextual profiles, or fresh start
 - **🎫 JWT Access Tokens** - Stateless token validation with JWT (HS256)
 - **🔄 Refresh Tokens** - Long-lived sessions with opaque refresh tokens
 - **🔍 Token Introspection** - RFC 7662 compliant token validation
@@ -132,6 +134,214 @@ sequenceDiagram
 3. **Agent detects auth page programmatically** ✅
 4. **Agent POSTs credentials via API** ✅
 5. Browser auto-redirects back with code
+
+## 🎯 Three Integration Scenarios
+
+Auth Agent provides **user context awareness** through the `/userinfo` endpoint, enabling websites to choose how agents interact with user accounts. Here are the three scenarios:
+
+### Scenario 1: Agent Acts on User's Existing Account 🔗
+
+**When to use:** User wants the agent to manage their existing account (e.g., manage Amazon orders, update profile)
+
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent
+    participant Website as Website (Amazon)
+    participant AuthAgent as Auth Agent
+
+    Agent->>AuthAgent: Authenticate
+    AuthAgent->>Agent: access_token
+    Agent->>Website: Present access_token
+    Website->>AuthAgent: GET /userinfo
+    AuthAgent->>Website: { email: "user@example.com" }
+
+    Note over Website: Search for existing user
+    Note over Website: ✅ Found user@example.com
+
+    Website->>Website: Link agent to existing account
+
+    Note over Agent,Website: Agent has FULL access:<br/>- Order history<br/>- Saved addresses<br/>- Payment methods<br/>- Account settings
+```
+
+**For Agent Users:**
+- ✅ Agent can view your purchase history
+- ✅ Agent can place orders with saved payment methods
+- ✅ Agent can access all your account data
+- ⚠️ Full control - use for trusted automation
+
+**For Websites:**
+```typescript
+// After getting access_token from agent
+const userInfo = await fetch('https://api.auth-agent.com/userinfo', {
+  headers: { 'Authorization': `Bearer ${access_token}` }
+});
+const { email } = await userInfo.json();
+
+// Find existing user
+const existingUser = await db.users.findOne({ email });
+
+if (existingUser) {
+  // Link agent to existing user account
+  await db.sessions.create({
+    userId: existingUser.id,
+    agentId: tokenData.sub,
+    accessLevel: 'full'
+  });
+}
+```
+
+---
+
+### Scenario 2: Fresh Agent Profile WITH User Context 🎨
+
+**When to use:** User wants agent to have its own space but benefit from their history (e.g., personalized recommendations, saved preferences)
+
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent
+    participant Website as Website (E-commerce)
+    participant AuthAgent as Auth Agent
+
+    Agent->>AuthAgent: Authenticate
+    AuthAgent->>Agent: access_token
+    Agent->>Website: Present access_token
+    Website->>AuthAgent: GET /userinfo
+    AuthAgent->>Website: { email: "user@example.com" }
+
+    Note over Website: Search for existing user
+    Note over Website: ✅ Found user@example.com
+
+    Website->>Website: Create NEW agent profile
+    Website->>Website: Link to user context (read-only)
+
+    Note over Agent,Website: Agent has SEPARATE profile with context:<br/>- User's saved addresses (reference)<br/>- Personalized recommendations<br/>- User's preferences/settings<br/>- User's rate limits applied
+```
+
+**For Agent Users:**
+- ✅ Agent gets personalized experience based on your history
+- ✅ Agent has its own separate cart/orders
+- ✅ Your original account stays untouched
+- ✅ Safe for experimental agent tasks
+
+**For Websites:**
+```typescript
+const { email } = await userInfo.json();
+const existingUser = await db.users.findOne({ email });
+
+if (existingUser) {
+  // Create separate agent profile
+  const agentProfile = await db.agentProfiles.create({
+    agentId: tokenData.sub,
+    linkedUserEmail: email,
+    contextAccess: 'read-only'
+  });
+
+  // Agent can read user context but acts independently
+  await db.sessions.create({
+    profileId: agentProfile.id,
+    userContextId: existingUser.id, // Reference only
+    accessLevel: 'contextual'
+  });
+}
+```
+
+---
+
+### Scenario 3: Fresh Agent Profile WITHOUT Context 🆕
+
+**When to use:** First-time user or user wants completely fresh agent experience (e.g., testing new website, privacy-focused usage)
+
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent
+    participant Website as Website (NewService)
+    participant AuthAgent as Auth Agent
+
+    Agent->>AuthAgent: Authenticate
+    AuthAgent->>Agent: access_token
+    Agent->>Website: Present access_token
+    Website->>AuthAgent: GET /userinfo
+    AuthAgent->>Website: { email: "user@example.com" }
+
+    Note over Website: Search for existing user
+    Note over Website: ❌ No user found
+
+    Website->>Website: Create NEW agent profile
+    Website->>Website: No context available
+
+    Note over Agent,Website: Agent has FRESH profile:<br/>- No history<br/>- No saved preferences<br/>- Clean slate<br/>- Email stored for audit only
+```
+
+**For Agent Users:**
+- ✅ Completely fresh start
+- ✅ No connection to existing accounts
+- ✅ Maximum privacy
+- ✅ Good for testing new services
+
+**For Websites:**
+```typescript
+const { email } = await userInfo.json();
+const existingUser = await db.users.findOne({ email });
+
+if (!existingUser) {
+  // Create brand new agent profile with no context
+  const agentProfile = await db.agentProfiles.create({
+    agentId: tokenData.sub,
+    email: email, // For identification/audit only
+    contextAccess: 'none'
+  });
+
+  await db.sessions.create({
+    profileId: agentProfile.id,
+    accessLevel: 'new'
+  });
+}
+```
+
+---
+
+### 📊 Scenario Comparison Table
+
+| Scenario | User Exists? | Website Decision | Agent Access Level | Use Case |
+|----------|-------------|------------------|-------------------|----------|
+| **1. Full Account Access** | ✅ Yes | Link to existing account | **Full** - All user data & actions | Trusted automation, account management |
+| **2. Contextual Profile** | ✅ Yes | Create agent profile + context | **Contextual** - Read user data, independent actions | Personalized experience, safe experimentation |
+| **3. Fresh Profile** | ❌ No | Create new agent profile | **None** - Clean slate | First-time users, maximum privacy |
+
+---
+
+### 🔑 The `/userinfo` Endpoint: Enabling All Scenarios
+
+All three scenarios are powered by the `/userinfo` endpoint:
+
+```bash
+# Website calls this after receiving access_token
+GET https://api.auth-agent.com/userinfo
+Authorization: Bearer <access_token>
+
+# Response (if 'email' scope granted)
+{
+  "sub": "agent_abc123",
+  "email": "user@example.com",
+  "name": "John Doe"
+}
+```
+
+**Key Features:**
+- ✅ Returns user email and name
+- ✅ Requires valid access token
+- ✅ Respects scopes (`email` or `openid` scope required)
+- ✅ Follows OAuth 2.0/OIDC standards
+
+**Website Decision Flow:**
+1. Call `/userinfo` to get user's email
+2. Check if user exists in your database
+3. Choose scenario based on your policy:
+   - **Scenario 1:** User exists → Link to existing account
+   - **Scenario 2:** User exists → Create agent profile with context
+   - **Scenario 3:** User doesn't exist → Create fresh profile
+
+---
 
 ## 🚀 Quick Start
 
@@ -341,6 +551,28 @@ Exchange authorization code for tokens, or refresh access token.
   "client_secret": "..."
 }
 ```
+
+#### `GET /userinfo`
+Get user information for a valid access token. **Essential for the three integration scenarios.**
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "sub": "agent_abc123",
+  "email": "user@example.com",
+  "name": "John Doe"
+}
+```
+
+**Notes:**
+- Email and name only returned if `email` or `openid` scope was granted
+- Enables websites to identify which user the agent represents
+- Powers all three integration scenarios (see [Three Integration Scenarios](#-three-integration-scenarios))
 
 #### `POST /introspect`
 Validate and get information about a token (RFC 7662).

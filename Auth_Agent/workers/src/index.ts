@@ -331,6 +331,69 @@ app.post('/introspect', async (c) => {
 });
 
 /**
+ * GET /userinfo
+ * UserInfo endpoint - returns user information for a valid access token
+ * This allows clients to identify which user the agent is acting on behalf of
+ */
+app.get('/userinfo', async (c) => {
+  try {
+    // Extract Bearer token from Authorization header
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({
+        error: 'invalid_request',
+        error_description: 'Missing or invalid Authorization header',
+      }, 401);
+    }
+
+    const accessToken = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    // Get token record
+    const tokenRecord = await db.getTokenByAccessToken(supabase, accessToken);
+    if (!tokenRecord) {
+      return c.json({
+        error: 'invalid_token',
+        error_description: 'Invalid or expired access token',
+      }, 401);
+    }
+
+    // Get agent details to retrieve user information
+    const agent = await db.getAgent(supabase, tokenRecord.agent_id);
+    if (!agent) {
+      return c.json({
+        error: 'server_error',
+        error_description: 'Agent not found',
+      }, 500);
+    }
+
+    // Check if the token has the required scope to access email
+    const scopes = tokenRecord.scope.split(' ');
+    const hasEmailScope = scopes.includes('email') || scopes.includes('openid');
+
+    // Build response based on granted scopes
+    const response: any = {
+      sub: tokenRecord.agent_id,
+    };
+
+    // Only return email and name if the email scope was granted
+    if (hasEmailScope) {
+      response.email = agent.user_email;
+      response.name = agent.user_name;
+    }
+
+    return c.json(response);
+  } catch (error: any) {
+    console.error('UserInfo error:', error);
+    return c.json({
+      error: 'server_error',
+      error_description: 'Internal server error',
+    }, 500);
+  }
+});
+
+/**
  * POST /revoke
  * Token revocation endpoint
  */
@@ -665,6 +728,7 @@ app.get('/.well-known/oauth-authorization-server', (c) => {
     token_endpoint: `${baseUrl}/token`,
     introspection_endpoint: `${baseUrl}/introspect`,
     revocation_endpoint: `${baseUrl}/revoke`,
+    userinfo_endpoint: `${baseUrl}/userinfo`,
     jwks_uri: `${baseUrl}/.well-known/jwks.json`,
     response_types_supported: ['code'],
     grant_types_supported: CONFIG.SUPPORTED_GRANT_TYPES,
