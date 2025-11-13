@@ -13,25 +13,24 @@
 
 Auth-Agent is an authentication system for web agents and computer using agents such as Browser Use, Comet, ChatGPT Atlas and Browserbase.
 Websites can add “Sign in with Auth-Agent” and developers receive an agent_id and agent_secret that their agents use to log in automatically. No human accounts. No password sharing. No scraping.
+</div>
 
+---
+FAQ:
 Can the agent access my account?
 
 Yes. An agent can still have context of your account on a website. It can access your data and preferences with your permission and this is handled by the website that uses Auth-Agent.
 This works without using your personal username or password. The website simply links the agent’s identity to your user account, similar to how apps connect accounts through Google Sign In.
 
-Why Auth-Agent matters
+Why Auth-Agent matters?
 
 It gives agents their own secure identity
 It removes the need to give agents your password
-Websites can safely link agents to user accounts
+Websites can safely link agents to user accounts so it can have your context 
 Authentication becomes clean and consistent instead of fragile
 No more cookie scraping or manual login automation
 
 Auth-Agent gives agents a simple and secure way to sign in across any website that supports it. It works like Google Sign In but is built specifically for agents instead of humans.
-
-</div>
-
----
 
 ## 🎥 Video Demos
 
