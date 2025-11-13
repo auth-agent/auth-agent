@@ -24,11 +24,11 @@ This works without using your personal username or password. The website simply 
 
 Why Auth-Agent matters?
 
-It gives agents their own secure identity
-It removes the need to give agents your password
-Websites can safely link agents to user accounts so it can have your context 
-Authentication becomes clean and consistent instead of fragile
-No more cookie scraping or manual login automation
+- It gives agents their own secure identity
+- It removes the need to give agents your password
+- Websites can safely link agents to user accounts so it can have your context 
+- Authentication becomes clean and consistent instead of fragile
+- No more cookie scraping or manual login automation
 
 Auth-Agent gives agents a simple and secure way to sign in across any website that supports it. It works like Google Sign In but is built specifically for agents instead of humans.
 
