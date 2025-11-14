@@ -12,19 +12,67 @@
 import React from 'react';
 import { createAuthAgentClient, AuthAgentConfig } from './auth-agent-sdk';
 
+// Branding colors - enforced
+const BRAND_COLORS = {
+  primary: '#FF6B35',
+  primaryHover: '#FF5722',
+  text: '#fff',
+  textMinimal: '#FF6B35',
+} as const;
+
+// Color-related CSS properties that cannot be overridden
+const PROTECTED_COLOR_PROPERTIES = [
+  'color',
+  'background',
+  'backgroundColor',
+  'borderColor',
+  'borderTopColor',
+  'borderRightColor',
+  'borderBottomColor',
+  'borderLeftColor',
+] as const;
+
+/**
+ * Validates that button text contains "Auth Agent" branding
+ */
+function validateButtonText(text: React.ReactNode): boolean {
+  if (!text) return true; // Default text is valid
+  const textStr = String(text).toLowerCase();
+  return textStr.includes('auth agent') || textStr.includes('auth-agent');
+}
+
+/**
+ * Filters out color-related properties from style object
+ */
+function filterColorProperties(style?: React.CSSProperties): React.CSSProperties {
+  if (!style) return {};
+  
+  const filtered: React.CSSProperties = {};
+  for (const key in style) {
+    if (style.hasOwnProperty(key) && !PROTECTED_COLOR_PROPERTIES.includes(key as any)) {
+      filtered[key as keyof React.CSSProperties] = style[key as keyof React.CSSProperties];
+    }
+  }
+  return filtered;
+}
+
 export interface AuthAgentButtonProps extends AuthAgentConfig {
   /**
-   * Button text
+   * Button text - MUST contain "Auth Agent" or "auth-agent" for branding compliance
+   * @example "Sign in with Auth Agent"
+   * @example "Continue with Auth Agent"
    */
   children?: React.ReactNode;
 
   /**
-   * Custom CSS class
+   * Custom CSS class - color-related classes will be ignored
+   * Only layout, spacing, and non-color styling allowed
    */
   className?: string;
 
   /**
-   * Custom styles
+   * Custom styles - color properties (background, color, borderColor) are protected and cannot be overridden
+   * Only layout, spacing, and non-color properties are allowed
    */
   style?: React.CSSProperties;
 
@@ -50,6 +98,14 @@ export const AuthAgentButton: React.FC<AuthAgentButtonProps> = ({
   onSignInStart,
   onError,
 }) => {
+  // Validate button text contains branding
+  const buttonText = children || 'Sign in with Auth Agent';
+  if (!validateButtonText(buttonText)) {
+    console.warn(
+      'AuthAgentButton: Button text must contain "Auth Agent" or "auth-agent" for branding compliance. Using default text.'
+    );
+  }
+
   const handleSignIn = async () => {
     try {
       onSignInStart?.();
@@ -68,37 +124,51 @@ export const AuthAgentButton: React.FC<AuthAgentButtonProps> = ({
     }
   };
 
-  const defaultStyle: React.CSSProperties = {
+  // Filter out color properties from custom style
+  const allowedStyle = filterColorProperties(style);
+
+  // Enforced branding styles - color properties will be set with !important via ref
+  const enforcedStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '10px',
     padding: '12px 24px',
     fontSize: '16px',
     fontWeight: 600,
-    color: '#fff',
-    background: '#FF6B35', // Vibrant orange matching logo
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
     transition: 'transform 0.2s, box-shadow 0.2s, background 0.2s',
-    boxShadow: '0 4px 12px rgba(255, 107, 53, 0.4)',
-    ...style,
+    ...allowedStyle, // Only non-color properties from custom style
   };
+
+  // Use ref to enforce color properties with !important
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  
+  React.useEffect(() => {
+    if (buttonRef.current) {
+      buttonRef.current.style.setProperty('color', BRAND_COLORS.text, 'important');
+      buttonRef.current.style.setProperty('background', BRAND_COLORS.primary, 'important');
+      buttonRef.current.style.setProperty('box-shadow', '0 4px 12px rgba(255, 107, 53, 0.4)', 'important');
+    }
+  }, []);
 
   return (
     <button
+      ref={buttonRef}
       onClick={handleSignIn}
       className={className}
-      style={defaultStyle}
+      style={enforcedStyle}
+      data-auth-agent-button="true"
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.background = '#FF5722'; // Darker orange on hover
-        e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 107, 53, 0.5)';
+        e.currentTarget.style.setProperty('transform', 'translateY(-2px)', 'important');
+        e.currentTarget.style.setProperty('background', BRAND_COLORS.primaryHover, 'important');
+        e.currentTarget.style.setProperty('box-shadow', '0 6px 16px rgba(255, 107, 53, 0.5)', 'important');
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.background = '#FF6B35';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 107, 53, 0.4)';
+        e.currentTarget.style.setProperty('transform', 'translateY(0)', 'important');
+        e.currentTarget.style.setProperty('background', BRAND_COLORS.primary, 'important');
+        e.currentTarget.style.setProperty('box-shadow', '0 4px 12px rgba(255, 107, 53, 0.4)', 'important');
       }}
     >
       <img
@@ -108,7 +178,7 @@ export const AuthAgentButton: React.FC<AuthAgentButtonProps> = ({
         height={24}
         style={{ objectFit: 'contain', display: 'block' }}
       />
-      {children || 'Sign in with Auth Agent'}
+      {validateButtonText(buttonText) ? buttonText : 'Sign in with Auth Agent'}
     </button>
   );
 };
@@ -127,6 +197,14 @@ export const AuthAgentButtonMinimal: React.FC<AuthAgentButtonProps> = ({
   onSignInStart,
   onError,
 }) => {
+  // Validate button text contains branding
+  const buttonText = children || 'Sign in with Auth Agent';
+  if (!validateButtonText(buttonText)) {
+    console.warn(
+      'AuthAgentButtonMinimal: Button text must contain "Auth Agent" or "auth-agent" for branding compliance. Using default text.'
+    );
+  }
+
   const handleSignIn = async () => {
     try {
       onSignInStart?.();
@@ -145,33 +223,47 @@ export const AuthAgentButtonMinimal: React.FC<AuthAgentButtonProps> = ({
     }
   };
 
-  const defaultStyle: React.CSSProperties = {
+  // Filter out color properties from custom style
+  const allowedStyle = filterColorProperties(style);
+
+  // Enforced branding styles - color properties will be set with !important via ref
+  const enforcedStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
     padding: '8px 16px',
     fontSize: '14px',
-    color: '#FF6B35',
-    background: 'transparent',
-    border: '2px solid #FF6B35',
     borderRadius: '6px',
     cursor: 'pointer',
     transition: 'all 0.2s',
-    ...style,
+    ...allowedStyle, // Only non-color properties from custom style
   };
+
+  // Use ref to enforce color properties with !important
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  
+  React.useEffect(() => {
+    if (buttonRef.current) {
+      buttonRef.current.style.setProperty('color', BRAND_COLORS.textMinimal, 'important');
+      buttonRef.current.style.setProperty('background', 'transparent', 'important');
+      buttonRef.current.style.setProperty('border', `2px solid ${BRAND_COLORS.primary}`, 'important');
+    }
+  }, []);
 
   return (
     <button
+      ref={buttonRef}
       onClick={handleSignIn}
       className={className}
-      style={defaultStyle}
+      style={enforcedStyle}
+      data-auth-agent-button="minimal"
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = '#FF6B35';
-        e.currentTarget.style.color = '#fff';
+        e.currentTarget.style.setProperty('background', BRAND_COLORS.primary, 'important');
+        e.currentTarget.style.setProperty('color', BRAND_COLORS.text, 'important');
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'transparent';
-        e.currentTarget.style.color = '#FF6B35';
+        e.currentTarget.style.setProperty('background', 'transparent', 'important');
+        e.currentTarget.style.setProperty('color', BRAND_COLORS.textMinimal, 'important');
       }}
     >
       <img
@@ -181,7 +273,7 @@ export const AuthAgentButtonMinimal: React.FC<AuthAgentButtonProps> = ({
         height={18}
         style={{ objectFit: 'contain', display: 'block' }}
       />
-      {children || 'Sign in with Auth Agent'}
+      {validateButtonText(buttonText) ? buttonText : 'Sign in with Auth Agent'}
     </button>
   );
 };

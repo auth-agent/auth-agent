@@ -1,0 +1,37 @@
+/**
+ * Auth Agent Button - Branding Enforcement CSS
+ * 
+ * This CSS file enforces branding colors via data attributes.
+ * Import this file in your application to ensure branding compliance.
+ */
+
+/* Standard button */
+[data-auth-agent-button="true"] {
+  color: #fff !important;
+  background: #FF6B35 !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4) !important;
+}
+
+[data-auth-agent-button="true"]:hover {
+  background: #FF5722 !important;
+  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.5) !important;
+}
+
+/* Minimal button */
+[data-auth-agent-button="minimal"] {
+  color: #FF6B35 !important;
+  background: transparent !important;
+  border: 2px solid #FF6B35 !important;
+}
+
+[data-auth-agent-button="minimal"]:hover {
+  background: #FF6B35 !important;
+  color: #fff !important;
+}
+
+/* Prevent any color overrides via classes */
+[data-auth-agent-button] * {
+  color: inherit !important;
+}
+
