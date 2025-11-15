@@ -20,7 +20,7 @@ Usage:
 import re
 import json
 import time
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable, List
 from urllib.parse import urlencode, urlparse
 try:
     import aiohttp
@@ -28,6 +28,16 @@ try:
 except ImportError:
     ASYNC_AVAILABLE = False
     import requests
+
+from ..common.errors import (
+    AuthAgentError,
+    AuthAgentNetworkError,
+    AuthAgentTimeoutError,
+    AuthAgentValidationError,
+    AuthAgentSecurityError,
+)
+from ..common.validation import validate_url
+from ..common.retry import retry_with_backoff, retry_with_backoff_async, RetryOptions
 
 
 class AuthAgentAgentSDK:
@@ -37,7 +47,9 @@ class AuthAgentAgentSDK:
         self,
         agent_id: str,
         agent_secret: str,
-        model: str
+        model: str,
+        allowed_hosts: Optional[List[str]] = None,
+        retry_options: Optional[RetryOptions] = None
     ):
         """
         Initialize Auth Agent SDK.
@@ -46,15 +58,22 @@ class AuthAgentAgentSDK:
             agent_id: Agent ID registered with Auth Agent
             agent_secret: Agent secret (keep secure!)
             model: Model identifier (e.g., 'gpt-4', 'claude-3.5-sonnet')
+            allowed_hosts: Optional whitelist of allowed hosts for SSRF protection
+            retry_options: Optional retry configuration
         """
+        if not agent_id or not agent_secret or not model:
+            raise AuthAgentValidationError('agent_id, agent_secret, and model are required')
+        
         self.auth_server_url: Optional[str] = None
         self.agent_id = agent_id
         self.agent_secret = agent_secret
         self.model = model
+        self.allowed_hosts = allowed_hosts
+        self.retry_options = retry_options or RetryOptions()
 
     def _extract_auth_server_url(self, authorization_url: str) -> str:
         """
-        Extract base URL from authorization URL.
+        Extract base URL from authorization URL with validation.
 
         Args:
             authorization_url: Full authorization URL
@@ -63,10 +82,12 @@ class AuthAgentAgentSDK:
             Base URL (protocol + host)
         """
         try:
-            parsed = urlparse(authorization_url)
+            parsed = validate_url(authorization_url, self.allowed_hosts)
             return f"{parsed.scheme}://{parsed.netloc}"
+        except (AuthAgentSecurityError, AuthAgentValidationError):
+            raise
         except Exception as e:
-            raise ValueError(f"Invalid authorization URL: {authorization_url}") from e
+            raise AuthAgentValidationError(f"Invalid authorization URL: {authorization_url}") from e
 
     def _get_auth_server_url(self, authorization_url: str) -> str:
         """
@@ -105,9 +126,15 @@ class AuthAgentAgentSDK:
                 raise RuntimeError("Use extract_request_id_async() for async requests, or install 'requests' for sync")
             else:
                 import requests
-                response = requests.get(authorization_url_or_html)
-                response.raise_for_status()
-                html = response.text
+                def _fetch():
+                    response = requests.get(
+                        authorization_url_or_html,
+                        timeout=self.retry_options.timeout
+                    )
+                    response.raise_for_status()
+                    return response.text
+                
+                html = retry_with_backoff(_fetch, self.retry_options)
         else:
             # Assume it's HTML content
             html = authorization_url_or_html
@@ -136,7 +163,9 @@ class AuthAgentAgentSDK:
         if script_match:
             return script_match.group(1)
 
-        raise ValueError('Could not extract request_id from authorization page. Make sure the page is loaded correctly.')
+        raise AuthAgentValidationError(
+            'Could not extract request_id from authorization page. Make sure the page is loaded correctly and contains window.authRequest.request_id.'
+        )
 
     async def extract_request_id_async(self, authorization_url_or_html: str) -> str:
         """
@@ -159,10 +188,17 @@ class AuthAgentAgentSDK:
         if authorization_url_or_html.startswith('http://') or authorization_url_or_html.startswith('https://'):
             # Extract and store auth server URL
             self.auth_server_url = self._extract_auth_server_url(authorization_url_or_html)
-            async with aiohttp.ClientSession() as session:
-                async with session.get(authorization_url_or_html) as response:
-                    response.raise_for_status()
-                    html = await response.text()
+            
+            async def _fetch():
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(authorization_url_or_html) as response:
+                        if not response.ok:
+                            raise AuthAgentNetworkError(
+                                f"Failed to fetch authorization page: {response.status} {response.reason}"
+                            )
+                        return await response.text()
+            
+            html = await retry_with_backoff_async(_fetch, self.retry_options)
         else:
             # Assume it's HTML content
             html = authorization_url_or_html
@@ -198,22 +234,36 @@ class AuthAgentAgentSDK:
             raise RuntimeError("Use authenticate_async() for async requests, or install 'requests' for sync")
         else:
             import requests
-            try:
-                response = requests.post(url, json=payload)
+            def _authenticate():
+                response = requests.post(
+                    url,
+                    json=payload,
+                    timeout=self.retry_options.timeout
+                )
                 data = response.json()
-
+                
                 if not response.ok:
-                    return {
-                        'success': False,
-                        'error': data.get('error', 'authentication_failed'),
-                        'error_description': data.get('error_description', f'HTTP {response.status_code}'),
-                    }
-
+                    error_msg = (
+                        f"Authentication failed: {data.get('error_description', data.get('error', f'HTTP {response.status_code}'))}"
+                    )
+                    error = AuthAgentNetworkError(error_msg)
+                    error.status_code = response.status_code
+                    raise error
+                
                 return {
                     'success': True,
                     'message': data.get('message', 'Agent authenticated successfully'),
                 }
-            except requests.RequestException as e:
+            
+            try:
+                return retry_with_backoff(_authenticate, self.retry_options)
+            except AuthAgentNetworkError as e:
+                return {
+                    'success': False,
+                    'error': 'network_error',
+                    'error_description': e.message,
+                }
+            except Exception as e:
                 return {
                     'success': False,
                     'error': 'network_error',
@@ -247,31 +297,35 @@ class AuthAgentAgentSDK:
             'model': self.model,
         }
 
-        try:
+        async def _authenticate():
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload) as response:
                     data = await response.json()
                     
-                    # Log for debugging
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.info(f'[SDK] POST {url} - Status: {response.status}')
-                    logger.info(f'[SDK] POST Response: {data}')
-
                     if not response.ok:
-                        return {
-                            'success': False,
-                            'error': data.get('error', 'authentication_failed'),
-                            'error_description': data.get('error_description', f'HTTP {response.status}'),
-                        }
+                        error_msg = (
+                            f"Authentication failed: {data.get('error_description', data.get('error', f'HTTP {response.status}'))}"
+                        )
+                        error = AuthAgentNetworkError(error_msg)
+                        error.status_code = response.status
+                        raise error
 
                     return {
                         'success': True,
                         'message': data.get('message', 'Agent authenticated successfully'),
                         'requires_2fa': data.get('requires_2fa', False),
                         'expires_in': data.get('expires_in'),
-                        'data': data,  # Include full response for debugging
+                        'data': data,
                     }
+        
+        try:
+            return await retry_with_backoff_async(_authenticate, self.retry_options)
+        except AuthAgentNetworkError as e:
+            return {
+                'success': False,
+                'error': 'network_error',
+                'error_description': e.message,
+            }
         except Exception as e:
             return {
                 'success': False,
@@ -306,29 +360,33 @@ class AuthAgentAgentSDK:
             'model': self.model,
         }
 
-        try:
+        async def _verify():
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=payload) as response:
                     data = await response.json()
 
-                    # Log for debugging
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.info(f'[SDK] POST {url} - Status: {response.status}')
-                    logger.info(f'[SDK] 2FA Verification Response: {data}')
-
                     if not response.ok:
-                        return {
-                            'success': False,
-                            'error': data.get('error', 'verification_failed'),
-                            'error_description': data.get('error_description', f'HTTP {response.status}'),
-                        }
+                        error_msg = (
+                            f"2FA verification failed: {data.get('error_description', data.get('error', f'HTTP {response.status}'))}"
+                        )
+                        error = AuthAgentNetworkError(error_msg)
+                        error.status_code = response.status
+                        raise error
 
                     return {
                         'success': True,
                         'message': data.get('message', '2FA verification successful'),
                         'data': data,
                     }
+        
+        try:
+            return await retry_with_backoff_async(_verify, self.retry_options)
+        except AuthAgentNetworkError as e:
+            return {
+                'success': False,
+                'error': 'network_error',
+                'error_description': e.message,
+            }
         except Exception as e:
             return {
                 'success': False,
@@ -358,9 +416,19 @@ class AuthAgentAgentSDK:
             raise RuntimeError("Use check_status_async() for async requests, or install 'requests' for sync")
         else:
             import requests
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            return response.json()
+            def _check():
+                response = requests.get(
+                    url,
+                    params=params,
+                    timeout=self.retry_options.timeout
+                )
+                if not response.ok:
+                    raise AuthAgentNetworkError(
+                        f"Status check failed: {response.status_code} {response.reason}"
+                    )
+                return response.json()
+            
+            return retry_with_backoff(_check, self.retry_options)
 
     async def check_status_async(self, request_id: str, authorization_url: str) -> Dict[str, Any]:
         """
@@ -383,10 +451,16 @@ class AuthAgentAgentSDK:
         url = f"{auth_server_url}/api/check-status"
         params = {'request_id': request_id}
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                response.raise_for_status()
-                return await response.json()
+        async def _check():
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    if not response.ok:
+                        raise AuthAgentNetworkError(
+                            f"Status check failed: {response.status} {response.reason}"
+                        )
+                    return await response.json()
+        
+        return await retry_with_backoff_async(_check, self.retry_options)
 
     def wait_for_authentication(
         self,

@@ -1,0 +1,8 @@
+include PYPI_README.md
+include README.md
+recursive-include python *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+
+
+

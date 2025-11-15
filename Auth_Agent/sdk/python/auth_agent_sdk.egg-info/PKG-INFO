@@ -1,0 +1,612 @@
+Metadata-Version: 2.4
+Name: auth-agent-sdk
+Version: 2.5.0
+Summary: Official Python SDK for Auth Agent - OAuth 2.1 authentication for websites and AI agents. Includes client SDK for Python backends (Flask/FastAPI) and agent SDK for browser automation with browser-use integration.
+Home-page: https://github.com/auth-agent/auth-agent
+Author: Auth Agent Team
+Author-email: sdk@auth-agent.com
+License: MIT
+Project-URL: Documentation, https://docs.auth-agent.com
+Project-URL: Source, https://github.com/auth-agent/auth-agent
+Project-URL: Tracker, https://github.com/auth-agent/auth-agent/issues
+Keywords: auth,oauth,oauth2,authentication,ai-agent,pkce,oidc,auth-agent,browser-use
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Security
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: aiohttp>=3.8.0
+Requires-Dist: typing-extensions>=4.0.0; python_version < "3.11"
+Provides-Extra: browser-use
+Requires-Dist: browser-use>=0.1.0; extra == "browser-use"
+Requires-Dist: playwright>=1.40.0; extra == "browser-use"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# auth-agent-sdk
+
+Official Python SDK for [Auth Agent](https://auth-agent.com) - OAuth 2.1 authentication for AI agents and websites.
+
+[![PyPI version](https://badge.fury.io/py/auth-agent-sdk.svg)](https://pypi.org/project/auth-agent-sdk/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
+## Installation
+
+```bash
+pip install auth-agent-sdk
+
+# For AI agents with browser-use integration
+pip install auth-agent-sdk[browser-use]
+```
+
+## What's Included
+
+This package includes SDKs for **both use cases**:
+
+### For Websites (Python Backends)
+Add "Sign in with Auth Agent" to your website backend:
+- 🐍 **Python SDK** - Server-side OAuth 2.1 client
+- 🔐 **PKCE support** - Secure authorization code flow
+- 🔄 **Token management** - Access & refresh tokens
+
+### For AI Agents
+Enable your AI agents to authenticate programmatically:
+- 🤖 **Agent SDK** - Authenticate on websites with Auth Agent
+- 🌐 **browser-use integration** - Seamless browser automation
+- 📡 **Back-channel auth** - No human interaction needed
+
+---
+
+## Quick Start
+
+### For Websites (Flask/FastAPI Backend)
+
+```python
+from auth_agent_sdk.client import AuthAgentClient
+
+# Initialize client
+client = AuthAgentClient(
+    client_id="your_client_id",
+    client_secret="your_client_secret",
+    redirect_uri="https://yoursite.com/callback"
+)
+
+# In your login route
+@app.route('/login')
+def login():
+    authorization_url = client.get_authorization_url()
+    return redirect(authorization_url)
+
+# In your callback route
+@app.route('/callback')
+def callback():
+    code = request.args.get('code')
+    code_verifier = session.get('code_verifier')
+
+    tokens = client.exchange_code(code, code_verifier)
+
+    # Store tokens
+    session['access_token'] = tokens['access_token']
+    session['refresh_token'] = tokens['refresh_token']
+
+    return redirect('/dashboard')
+```
+
+---
+
+### For AI Agents (Basic)
+
+```python
+from auth_agent_sdk.agent import AuthAgentSDK
+
+# Initialize SDK
+sdk = AuthAgentSDK(
+    agent_id="agent_xxx",
+    agent_secret="ags_xxx",
+    model="gpt-4"
+)
+
+# When your agent encounters an Auth Agent login page
+authorization_url = "https://api.auth-agent.com/authorize?..."
+
+# Automatically authenticate
+result = await sdk.complete_authentication_flow(authorization_url)
+
+print(f"Authorization code: {result['code']}")
+# Use this code to complete the OAuth flow
+```
+
+---
+
+### For AI Agents (browser-use Integration)
+
+The recommended way to use Auth Agent with AI agents is through [browser-use](https://github.com/browser-use/browser-use):
+
+```python
+"""
+Example: Auth Agent authentication with browser-use
+"""
+import os
+import asyncio
+from dotenv import load_dotenv
+from auth_agent_sdk.agent.browser_use import AuthAgentTools
+from browser_use import Agent, Controller
+
+load_dotenv()
+
+async def main():
+    # Initialize browser controller
+    controller = Controller()
+
+    # Initialize Auth Agent tools
+    tools = AuthAgentTools(
+        agent_id=os.getenv('AGENT_ID'),
+        agent_secret=os.getenv('AGENT_SECRET'),
+        model=os.getenv('AGENT_MODEL', 'gpt-4'),
+    )
+
+    # Create the authentication task
+    task = (
+        "Go to the website and click 'Sign in with Auth Agent'. "
+        "When the spinning authentication page appears, "
+        "use the authenticate_with_auth_agent tool to complete authentication."
+    )
+
+    # Create and run the agent
+    agent = Agent(
+        task=task,
+        llm=controller,
+        tools=tools
+    )
+
+    history = await agent.run()
+
+    print("Authentication Complete!")
+    return history
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+**Key Features:**
+- ✅ Automatic request ID extraction from auth pages
+- ✅ Seamless credential submission
+- ✅ Built-in polling for auth completion
+- ✅ Works with any LLM (GPT-4, Claude, etc.)
+
+---
+
+## API Reference
+
+### For Websites
+
+#### `AuthAgentClient`
+
+Server-side SDK for OAuth flows.
+
+```python
+from auth_agent_sdk.client import AuthAgentClient
+
+client = AuthAgentClient(
+    client_id="your_client_id",
+    client_secret="your_client_secret",
+    redirect_uri="https://yoursite.com/callback",
+    auth_server_url="https://api.auth-agent.com",  # optional
+)
+```
+
+**Methods:**
+
+##### `get_authorization_url() -> str`
+
+Generate authorization URL to redirect users.
+
+```python
+auth_url = client.get_authorization_url()
+# Also stores code_verifier for later use
+```
+
+##### `exchange_code(code: str, code_verifier: str) -> dict`
+
+Exchange authorization code for tokens.
+
+```python
+tokens = client.exchange_code(code, code_verifier)
+# Returns: {
+#     'access_token': '...',
+#     'refresh_token': '...',
+#     'token_type': 'Bearer',
+#     'expires_in': 3600,
+#     'scope': 'openid profile email'
+# }
+```
+
+##### `refresh_access_token(refresh_token: str) -> dict`
+
+Refresh an expired access token.
+
+```python
+new_tokens = client.refresh_access_token(refresh_token)
+```
+
+##### `introspect_token(token: str) -> dict`
+
+Validate and get token information.
+
+```python
+token_info = client.introspect_token(access_token)
+# Returns: { 'active': True, 'sub': 'agent_xxx', ... }
+```
+
+##### `revoke_token(token: str, token_type_hint: str = 'access_token')`
+
+Revoke a token.
+
+```python
+client.revoke_token(access_token, 'access_token')
+```
+
+---
+
+### For AI Agents
+
+#### `AuthAgentSDK`
+
+SDK for AI agents to authenticate programmatically.
+
+```python
+from auth_agent_sdk.agent import AuthAgentSDK
+
+sdk = AuthAgentSDK(
+    agent_id="agent_xxx",
+    agent_secret="ags_xxx",
+    model="gpt-4",  # or "claude-3.5-sonnet", etc.
+    auth_server_url="https://api.auth-agent.com",  # optional
+)
+```
+
+**Methods:**
+
+##### `async extract_request_id(authorization_url: str) -> str`
+
+Extract request ID from authorization page.
+
+```python
+request_id = await sdk.extract_request_id(authorization_url)
+```
+
+##### `async authenticate(request_id: str, authorization_url: str)`
+
+Authenticate with Auth Agent server.
+
+```python
+await sdk.authenticate(request_id, authorization_url)
+```
+
+##### `async check_status(request_id: str, authorization_url: str) -> dict`
+
+Check authentication status.
+
+```python
+status = await sdk.check_status(request_id, authorization_url)
+# Returns: {
+#     'status': 'authenticated' | 'pending',
+#     'code': '...',  # if authenticated
+#     'state': '...'  # if authenticated
+# }
+```
+
+##### `async complete_authentication_flow(authorization_url: str) -> dict`
+
+Complete entire flow (extract → authenticate → poll).
+
+```python
+result = await sdk.complete_authentication_flow(authorization_url)
+# Returns: { 'code': '...', 'state': '...', 'redirect_uri': '...' }
+```
+
+---
+
+#### `AuthAgentTools` (browser-use Integration)
+
+Tools for browser-use framework.
+
+```python
+from auth_agent_sdk.agent.browser_use import AuthAgentTools
+
+tools = AuthAgentTools(
+    agent_id="agent_xxx",
+    agent_secret="ags_xxx",
+    model="gpt-4",
+)
+
+# Use with browser-use Agent
+agent = Agent(task=task, llm=llm, tools=tools)
+```
+
+**Available Tools:**
+- `authenticate_with_auth_agent` - Automatically extract request ID and authenticate
+- Returns authorization code when complete
+
+---
+
+## Environment Variables
+
+```env
+# For websites
+AUTH_AGENT_CLIENT_ID=your_client_id
+AUTH_AGENT_CLIENT_SECRET=your_client_secret
+AUTH_AGENT_REDIRECT_URI=https://yoursite.com/callback
+
+# For agents
+AGENT_ID=agent_xxx
+AGENT_SECRET=ags_xxx
+AGENT_MODEL=gpt-4
+```
+
+---
+
+## Examples
+
+### Flask Example
+
+```python
+from flask import Flask, redirect, request, session
+from auth_agent_sdk.client import AuthAgentClient
+
+app = Flask(__name__)
+app.secret_key = 'your-secret-key'
+
+client = AuthAgentClient(
+    client_id=os.getenv('AUTH_AGENT_CLIENT_ID'),
+    client_secret=os.getenv('AUTH_AGENT_CLIENT_SECRET'),
+    redirect_uri='http://localhost:5000/callback'
+)
+
+@app.route('/login')
+def login():
+    auth_url = client.get_authorization_url()
+    # Store code_verifier for callback
+    session['code_verifier'] = client.code_verifier
+    return redirect(auth_url)
+
+@app.route('/callback')
+def callback():
+    code = request.args.get('code')
+    code_verifier = session.pop('code_verifier')
+
+    tokens = client.exchange_code(code, code_verifier)
+
+    session['access_token'] = tokens['access_token']
+    return redirect('/dashboard')
+
+@app.route('/dashboard')
+def dashboard():
+    if 'access_token' not in session:
+        return redirect('/login')
+
+    # Introspect token
+    token_info = client.introspect_token(session['access_token'])
+
+    if not token_info['active']:
+        return redirect('/login')
+
+    return f"Welcome, Agent {token_info['sub']}!"
+```
+
+### FastAPI Example
+
+```python
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import RedirectResponse
+from auth_agent_sdk.client import AuthAgentClient
+import os
+
+app = FastAPI()
+
+client = AuthAgentClient(
+    client_id=os.getenv('AUTH_AGENT_CLIENT_ID'),
+    client_secret=os.getenv('AUTH_AGENT_CLIENT_SECRET'),
+    redirect_uri='http://localhost:8000/callback'
+)
+
+@app.get('/login')
+def login(response: Response):
+    auth_url = client.get_authorization_url()
+    # Store code_verifier in cookie
+    response.set_cookie('code_verifier', client.code_verifier, httponly=True)
+    return RedirectResponse(auth_url)
+
+@app.get('/callback')
+def callback(request: Request):
+    code = request.query_params.get('code')
+    code_verifier = request.cookies.get('code_verifier')
+
+    tokens = client.exchange_code(code, code_verifier)
+
+    # Store tokens (use your session management)
+    response = RedirectResponse('/dashboard')
+    response.set_cookie('access_token', tokens['access_token'], httponly=True)
+    return response
+```
+
+### AI Agent with browser-use (Full Example)
+
+```python
+"""
+Complete example: AI agent authenticates on a website using Auth Agent
+"""
+import os
+import asyncio
+from dotenv import load_dotenv
+from auth_agent_sdk.agent.browser_use import AuthAgentTools
+from browser_use import Agent, Controller
+
+load_dotenv()
+
+async def main():
+    # Initialize browser
+    controller = Controller()
+
+    # Initialize Auth Agent tools
+    tools = AuthAgentTools(
+        agent_id=os.getenv('AGENT_ID'),
+        agent_secret=os.getenv('AGENT_SECRET'),
+        model='gpt-4',
+    )
+
+    # Create task
+    task = (
+        "Go to https://example.com/login "
+        "and click 'Sign in with Auth Agent'. "
+        "When the authentication page appears (spinning loader), "
+        "use the authenticate_with_auth_agent tool. "
+        "Wait for redirect to dashboard."
+    )
+
+    # Run agent
+    agent = Agent(task=task, llm=controller, tools=tools)
+    history = await agent.run()
+
+    print("Authentication complete!")
+    print(f"Final URL: {await controller.get_current_url()}")
+
+    return history
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+---
+
+## Security Best Practices
+
+### For Websites
+
+✅ **DO:**
+- Store `client_secret` securely (environment variables)
+- Use HTTPS in production
+- Validate `state` parameter
+- Store tokens securely (database, encrypted cookies)
+- Implement token refresh logic
+
+❌ **DON'T:**
+- Expose `client_secret` to frontend
+- Store tokens in browser localStorage
+- Skip PKCE validation
+- Use HTTP in production
+
+### For Agents
+
+✅ **DO:**
+- Store credentials in environment variables
+- Never log `agent_secret`
+- Use HTTPS for all API calls
+- Verify SSL certificates
+
+❌ **DON'T:**
+- Hardcode credentials
+- Commit `.env` to version control
+- Disable SSL verification
+
+---
+
+## Async Support
+
+All agent methods are async and require `asyncio`:
+
+```python
+import asyncio
+
+async def authenticate():
+    sdk = AuthAgentSDK(...)
+    result = await sdk.complete_authentication_flow(url)
+    return result
+
+# Run
+result = asyncio.run(authenticate())
+```
+
+---
+
+## Getting Credentials
+
+To use Auth Agent, you need to register:
+
+1. **For Websites**: Register an OAuth client
+2. **For Agents**: Register an agent
+
+**Coming Soon:** Visit [console.auth-agent.com](https://console.auth-agent.com) to self-register!
+
+For now, please contact us or see the [documentation](https://docs.auth-agent.com).
+
+---
+
+## Documentation
+
+- [Full Documentation](https://docs.auth-agent.com)
+- [Integration Guides](https://docs.auth-agent.com/guides/integration-scenarios)
+- [API Reference](https://docs.auth-agent.com/api-reference)
+- [Security Guide](https://docs.auth-agent.com/guides/security)
+- [browser-use Integration](https://docs.auth-agent.com/guides/browser-use)
+
+---
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/auth-agent/auth-agent/issues)
+- **Documentation**: [docs.auth-agent.com](https://docs.auth-agent.com)
+- **Community**: [Discord](https://discord.gg/auth-agent)
+
+---
+
+## License
+
+MIT © Auth Agent Team
+
+---
+
+## Related Packages
+
+- **npm Package**: [`npm install auth-agent-sdk`](https://www.npmjs.com/package/auth-agent-sdk)
+- **browser-use**: [https://github.com/browser-use/browser-use](https://github.com/browser-use/browser-use)
+
+---
+
+## Changelog
+
+### 1.0.0 (2025-01-07)
+
+- Initial release
+- Website SDK for Python backends
+- Agent SDK for programmatic authentication
+- browser-use integration
+- Full async/await support
+- PKCE implementation
+- OAuth 2.1 compliant

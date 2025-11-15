@@ -19,6 +19,10 @@
  * ```
  */
 
+import { validateUrl } from '../common/validation';
+import { retryWithBackoff, RetryOptions } from '../common/retry';
+import { AuthAgentNetworkError, AuthAgentValidationError, AuthAgentSecurityError } from '../common/errors';
+
 export interface AuthAgentAgentConfig {
   /** Agent ID registered with Auth Agent */
   agentId: string;
@@ -26,6 +30,10 @@ export interface AuthAgentAgentConfig {
   agentSecret: string;
   /** Model identifier (e.g., 'gpt-4', 'claude-3.5-sonnet') */
   model: string;
+  /** Allowed hosts for SSRF protection */
+  allowedHosts?: string[];
+  /** Retry options for network requests */
+  retryOptions?: RetryOptions;
 }
 
 export interface AuthenticationResult {
@@ -48,22 +56,31 @@ export class AuthAgentAgentSDK {
   private authServerUrl: string | null = null;
 
   constructor(config: AuthAgentAgentConfig) {
+    if (!config.agentId || !config.agentSecret || !config.model) {
+      throw new AuthAgentValidationError('agentId, agentSecret, and model are required');
+    }
+
     this.config = {
       agentId: config.agentId,
       agentSecret: config.agentSecret,
       model: config.model,
+      allowedHosts: config.allowedHosts,
+      retryOptions: config.retryOptions,
     };
   }
 
   /**
-   * Extract base URL from authorization URL
+   * Extract base URL from authorization URL with validation
    */
   private extractAuthServerUrl(authorizationUrl: string): string {
     try {
-      const url = new URL(authorizationUrl);
+      const url = validateUrl(authorizationUrl, this.config.allowedHosts);
       return `${url.protocol}//${url.host}`;
     } catch (error) {
-      throw new Error(`Invalid authorization URL: ${authorizationUrl}`);
+      if (error instanceof AuthAgentSecurityError || error instanceof AuthAgentValidationError) {
+        throw error;
+      }
+      throw new AuthAgentValidationError(`Invalid authorization URL: ${authorizationUrl}`);
     }
   }
 
@@ -93,18 +110,20 @@ export class AuthAgentAgentSDK {
     let html: string;
     
     if (authorizationUrlOrHtml.startsWith('http://') || authorizationUrlOrHtml.startsWith('https://')) {
-      // Extract and store auth server URL
+      // Validate and extract auth server URL
       this.authServerUrl = this.extractAuthServerUrl(authorizationUrlOrHtml);
-      // It's a URL - fetch it
-      try {
+      
+      // Fetch with retry logic
+      html = await retryWithBackoff(async () => {
         const response = await fetch(authorizationUrlOrHtml);
         if (!response.ok) {
-          throw new Error(`Failed to fetch authorization page: ${response.status} ${response.statusText}`);
+          throw new AuthAgentNetworkError(
+            `Failed to fetch authorization page: ${response.status} ${response.statusText}`,
+            new Error(`HTTP ${response.status}`)
+          );
         }
-        html = await response.text();
-      } catch (error) {
-        throw new Error(`Failed to fetch authorization URL: ${error instanceof Error ? error.message : String(error)}`);
-      }
+        return await response.text();
+      }, this.config.retryOptions);
     } else {
       // Assume it's HTML content
       html = authorizationUrlOrHtml;
@@ -128,7 +147,21 @@ export class AuthAgentAgentSDK {
       return scriptMatch[1];
     }
 
-    throw new Error('Could not extract request_id from authorization page. Make sure the page is loaded correctly.');
+    throw new AuthAgentValidationError(
+      'Could not extract request_id from authorization page. Make sure the page is loaded correctly and contains window.authRequest.request_id.'
+    );
+  }
+
+  /**
+   * Extract request_id from authorization page (async version)
+   * Alias for extractRequestId to match Python SDK naming
+   * 
+   * @param authorizationUrlOrHtml - Full authorization URL or HTML content
+   * @returns request_id string
+   * @throws Error if request_id cannot be extracted
+   */
+  async extractRequestIdAsync(authorizationUrlOrHtml: string): Promise<string> {
+    return this.extractRequestId(authorizationUrlOrHtml);
   }
 
   /**
@@ -139,38 +172,62 @@ export class AuthAgentAgentSDK {
    * @returns Authentication result
    */
   async authenticate(requestId: string, authorizationUrl: string): Promise<AuthenticationResult> {
+    // Alias for authenticateAsync to match Python SDK naming
+    return this.authenticateAsync(requestId, authorizationUrl);
+  }
+
+  /**
+   * Authenticate the agent with Auth Agent server (async version)
+   * Matches Python SDK's authenticate_async method signature
+   * 
+   * @param requestId - Request ID extracted from authorization page
+   * @param authorizationUrl - Authorization URL (used to extract server URL)
+   * @returns Authentication result dictionary with 'success', 'message', 'error', etc.
+   */
+  async authenticateAsync(requestId: string, authorizationUrl: string): Promise<AuthenticationResult> {
     const authServerUrl = this.getAuthServerUrl(authorizationUrl);
     const url = `${authServerUrl}/api/agent/authenticate`;
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          request_id: requestId,
-          agent_id: this.config.agentId,
-          agent_secret: this.config.agentSecret,
-          model: this.config.model,
-        }),
-      });
+      const response = await retryWithBackoff(async () => {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            request_id: requestId,
+            agent_id: this.config.agentId,
+            agent_secret: this.config.agentSecret,
+            model: this.config.model,
+          }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new AuthAgentNetworkError(
+            `Authentication failed: ${errorData.error_description || errorData.error || `HTTP ${res.status}`}`,
+            new Error(`HTTP ${res.status}`)
+          );
+        }
+
+        return res;
+      }, this.config.retryOptions);
 
       const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'authentication_failed',
-          error_description: data.error_description || `HTTP ${response.status}`,
-        };
-      }
 
       return {
         success: true,
         message: data.message || 'Agent authenticated successfully',
       };
     } catch (error) {
+      if (error instanceof AuthAgentNetworkError) {
+        return {
+          success: false,
+          error: 'network_error',
+          error_description: error.message,
+        };
+      }
       return {
         success: false,
         error: 'network_error',
@@ -187,24 +244,50 @@ export class AuthAgentAgentSDK {
    * @returns Current authentication status
    */
   async checkStatus(requestId: string, authorizationUrl: string): Promise<AuthStatus> {
+    // Alias for checkStatusAsync to match Python SDK naming
+    return this.checkStatusAsync(requestId, authorizationUrl);
+  }
+
+  /**
+   * Check authentication status (async version)
+   * Matches Python SDK's check_status_async method signature
+   * 
+   * @param requestId - Request ID to check
+   * @param authorizationUrl - Authorization URL (used to extract server URL)
+   * @returns Current authentication status
+   */
+  async checkStatusAsync(requestId: string, authorizationUrl: string): Promise<AuthStatus> {
     const authServerUrl = this.getAuthServerUrl(authorizationUrl);
     const url = `${authServerUrl}/api/check-status?request_id=${encodeURIComponent(requestId)}`;
 
     try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await retryWithBackoff(async () => {
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`Status check failed: ${response.status} ${response.statusText}`);
-      }
+        if (!res.ok) {
+          throw new AuthAgentNetworkError(
+            `Status check failed: ${res.status} ${res.statusText}`,
+            new Error(`HTTP ${res.status}`)
+          );
+        }
+
+        return res;
+      }, this.config.retryOptions);
 
       return await response.json();
     } catch (error) {
-      throw new Error(`Failed to check status: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof AuthAgentNetworkError) {
+        throw error;
+      }
+      throw new AuthAgentNetworkError(
+        `Failed to check status: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error : undefined
+      );
     }
   }
 
@@ -225,12 +308,34 @@ export class AuthAgentAgentSDK {
       onStatusUpdate?: (status: AuthStatus) => void; // callback on each status check
     } = {}
   ): Promise<AuthStatus> {
-    const {
-      pollInterval = 500,
-      timeout = 60000,
-      onStatusUpdate,
-    } = options;
+    // Convert options object to individual parameters for waitForAuthenticationAsync
+    return this.waitForAuthenticationAsync(
+      requestId,
+      authorizationUrl,
+      options.pollInterval ?? 500,
+      options.timeout ?? 60000,
+      options.onStatusUpdate
+    );
+  }
 
+  /**
+   * Wait for authentication to complete by polling status (async version)
+   * Matches Python SDK's wait_for_authentication_async method signature
+   * 
+   * @param requestId - Request ID to poll
+   * @param authorizationUrl - Authorization URL (used to extract server URL)
+   * @param pollInterval - Milliseconds between polls (default: 500)
+   * @param timeout - Maximum wait time in milliseconds (default: 60000)
+   * @param onStatusUpdate - Optional callback function called on each status check
+   * @returns Final authentication status with authorization code
+   */
+  async waitForAuthenticationAsync(
+    requestId: string,
+    authorizationUrl: string,
+    pollInterval: number = 500,
+    timeout: number = 60000,
+    onStatusUpdate?: (status: AuthStatus) => void
+  ): Promise<AuthStatus> {
     const startTime = Date.now();
 
     return new Promise((resolve, reject) => {
@@ -242,7 +347,7 @@ export class AuthAgentAgentSDK {
             return;
           }
 
-          const status = await this.checkStatus(requestId, authorizationUrl);
+          const status = await this.checkStatusAsync(requestId, authorizationUrl);
 
           // Call status update callback
           if (onStatusUpdate) {
@@ -290,18 +395,43 @@ export class AuthAgentAgentSDK {
       onStatusUpdate?: (status: AuthStatus) => void;
     } = {}
   ): Promise<AuthStatus> {
+    // Use async methods to match Python SDK pattern
+    return this.completeAuthenticationFlowAsync(
+      authorizationUrl,
+      options.pollInterval ?? 500,
+      options.timeout ?? 60000,
+      options.onStatusUpdate
+    );
+  }
+
+  /**
+   * Complete authentication flow: extract request_id, authenticate, and wait for completion (async version)
+   * Matches Python SDK's complete_authentication_flow_async method signature
+   * 
+   * @param authorizationUrl - Full authorization URL
+   * @param pollInterval - Milliseconds between polls (default: 500)
+   * @param timeout - Maximum wait time in milliseconds (default: 60000)
+   * @param onStatusUpdate - Optional callback function called on each status check
+   * @returns Final authentication status with authorization code
+   */
+  async completeAuthenticationFlowAsync(
+    authorizationUrl: string,
+    pollInterval: number = 500,
+    timeout: number = 60000,
+    onStatusUpdate?: (status: AuthStatus) => void
+  ): Promise<AuthStatus> {
     // Step 1: Extract request_id (also extracts and stores auth server URL)
-    const requestId = await this.extractRequestId(authorizationUrl);
+    const requestId = await this.extractRequestIdAsync(authorizationUrl);
 
     // Step 2: Authenticate
-    const authResult = await this.authenticate(requestId, authorizationUrl);
+    const authResult = await this.authenticateAsync(requestId, authorizationUrl);
 
     if (!authResult.success) {
       throw new Error(authResult.error_description || authResult.error || 'Authentication failed');
     }
 
     // Step 3: Wait for completion
-    return await this.waitForAuthentication(requestId, authorizationUrl, options);
+    return await this.waitForAuthenticationAsync(requestId, authorizationUrl, pollInterval, timeout, onStatusUpdate);
   }
 }
 

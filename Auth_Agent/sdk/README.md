@@ -1,509 +1,476 @@
-# Auth Agent SDK
+# auth-agent-sdk
 
-Complete integration SDKs for Auth Agent OAuth 2.1 authentication.
+Official SDK for [Auth Agent](https://auth-agent.com) - OAuth 2.1 authentication for AI agents and websites.
+
+[![npm version](https://badge.fury.io/js/auth-agent-sdk.svg)](https://www.npmjs.com/package/auth-agent-sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Installation
 
-### Client-Side SDK (Browser)
+```bash
+npm install auth-agent-sdk
+# or
+yarn add auth-agent-sdk
+# or
+pnpm add auth-agent-sdk
+```
 
-**Copy these files to your project:**
-- `sdk/client/auth-agent-sdk.ts` - Core SDK
-- `sdk/client/AuthAgentButton.tsx` - React component
-- `sdk/client/auth-agent-button-vanilla.js` - Vanilla JS component
+## What's Included
 
-### Server-Side SDK (Node.js/TypeScript)
+This package includes SDKs for **both use cases**:
 
-**Copy this file to your project:**
-- `sdk/server/auth-agent-server-sdk.ts`
+### For Websites
+Add "Sign in with Auth Agent" to your website:
+- 🎨 **React components** - Pre-built Auth Agent button
+- 🌐 **Vanilla JavaScript** - Framework-agnostic client SDK
+- 🔐 **OAuth 2.1 with PKCE** - Secure authorization flow
 
-### AI Agent SDK (For Agents to Authenticate)
-
-**Copy these files to your project:**
-- `sdk/agent/auth-agent-agent-sdk.ts` - TypeScript SDK
-- `sdk/agent/auth_agent_agent_sdk.py` - Python SDK
-
-See [Agent SDK Documentation](./agent/README.md) for details.
+### For AI Agents
+Enable your AI agents to authenticate programmatically:
+- 🤖 **Agent SDK** - Authenticate on websites with Auth Agent
+- 📡 **Back-channel authentication** - No human interaction needed
+- ✅ **TypeScript support** - Full type safety
 
 ---
 
 ## Quick Start
 
-### 1. React/Next.js Integration
+### For Websites (React/Next.js)
 
-**Install the button component:**
+#### 1. Add the Auth Agent Button
 
 ```tsx
-// components/AuthAgentButton.tsx
-import { AuthAgentButton } from '@/sdk/client/AuthAgentButton';
+import { AuthAgentButton } from 'auth-agent-sdk/client/react';
 
 export default function LoginPage() {
   return (
-    <div>
-      <h1>Welcome</h1>
-
-      <AuthAgentButton
-        authServerUrl="http://localhost:3000"
-        clientId="your_client_id"
-        redirectUri="https://yoursite.com/callback"
-        onSignInStart={() => console.log('Sign in started')}
-        onError={(error) => console.error('Error:', error)}
-      />
-    </div>
+    <AuthAgentButton
+      clientId="your_client_id"
+      redirectUri="https://yoursite.com/callback"
+      onSuccess={(tokens) => {
+        console.log('Authenticated!', tokens);
+      }}
+      onError={(error) => {
+        console.error('Auth failed:', error);
+      }}
+    />
   );
 }
 ```
 
-**Handle the callback:**
+#### 2. Handle the Callback
 
 ```tsx
-// pages/callback.tsx (Next.js)
-// or app/callback/page.tsx (Next.js App Router)
+'use client';
 
-'use client'; // if using App Router
-
-import { useEffect, useState } from 'react';
-import { createAuthAgentClient } from '@/sdk/client/auth-agent-sdk';
+import { useEffect } from 'react';
+import { AuthAgentClient } from 'auth-agent-sdk/client';
 
 export default function CallbackPage() {
-  const [status, setStatus] = useState('Processing...');
-
   useEffect(() => {
-    async function handleCallback() {
-      const client = createAuthAgentClient({
-        authServerUrl: 'http://localhost:3000',
-        clientId: 'your_client_id',
-        redirectUri: 'https://yoursite.com/callback',
-      });
-
-      try {
-        // Handle callback
-        const result = client.handleCallback();
-
-        if (!result) {
-          setStatus('Error: Invalid callback');
-          return;
-        }
-
-        // Send to your backend to exchange for token
-        const response = await fetch('/api/auth/exchange', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            code: result.code,
-            codeVerifier: result.codeVerifier,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // Redirect to dashboard
-          window.location.href = '/dashboard';
-        } else {
-          setStatus('Error: ' + data.error);
-        }
-      } catch (error) {
-        setStatus('Error: ' + error.message);
-      }
-    }
-
-    handleCallback();
-  }, []);
-
-  return <div>{status}</div>;
-}
-```
-
-**Backend token exchange (Next.js API route):**
-
-```typescript
-// pages/api/auth/exchange.ts (Pages Router)
-// or app/api/auth/exchange/route.ts (App Router)
-
-import { NextApiRequest, NextApiResponse } from 'next';
-import { createAuthAgentServerSDK } from '@/sdk/server/auth-agent-server-sdk';
-
-const authSDK = createAuthAgentServerSDK({
-  authServerUrl: 'http://localhost:3000',
-  clientId: process.env.AUTH_AGENT_CLIENT_ID!,
-  clientSecret: process.env.AUTH_AGENT_CLIENT_SECRET!,
-});
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { code, codeVerifier } = req.body;
-
-  try {
-    // Exchange code for token
-    const tokens = await authSDK.exchangeCode(
-      code,
-      codeVerifier,
-      process.env.AUTH_AGENT_REDIRECT_URI!
-    );
-
-    // Get user info
-    const userInfo = await authSDK.getUserInfo(tokens.access_token);
-
-    // Create session (use your preferred session management)
-    // For example with iron-session, next-auth, etc.
-    req.session.set('user', {
-      agentId: userInfo?.sub,
-      model: userInfo?.model,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-    });
-    await req.session.save();
-
-    return res.json({ success: true });
-  } catch (error) {
-    console.error('Token exchange error:', error);
-    return res.status(400).json({
-      success: false,
-      error: error.message
-    });
-  }
-}
-```
-
----
-
-### 2. Vanilla JavaScript/HTML Integration
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Login with Auth Agent</title>
-</head>
-<body>
-  <h1>Welcome</h1>
-
-  <!-- Button will be rendered here -->
-  <div id="auth-agent-button"></div>
-
-  <!-- Include SDK -->
-  <script src="/sdk/client/auth-agent-sdk.js"></script>
-  <script src="/sdk/client/auth-agent-button-vanilla.js"></script>
-
-  <script>
-    // Render button
-    AuthAgentButton.render({
-      elementId: 'auth-agent-button',
-      authServerUrl: 'http://localhost:3000',
-      clientId: 'your_client_id',
-      redirectUri: 'https://yoursite.com/callback.html',
-      text: 'Sign in with Auth Agent',
-      theme: 'default', // or 'minimal'
-      onSignInStart: () => console.log('Starting sign in...'),
-      onError: (error) => console.error('Error:', error)
-    });
-  </script>
-</body>
-</html>
-```
-
-**Callback page:**
-
-```html
-<!-- callback.html -->
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Processing...</title>
-</head>
-<body>
-  <p>Processing authentication...</p>
-
-  <script src="/sdk/client/auth-agent-sdk.js"></script>
-  <script>
     const client = new AuthAgentClient({
-      authServerUrl: 'http://localhost:3000',
       clientId: 'your_client_id',
-      redirectUri: 'https://yoursite.com/callback.html',
+      clientSecret: 'your_client_secret', // Server-side only!
     });
 
-    // Handle callback
     const result = client.handleCallback();
-
     if (result) {
-      // Send to backend
+      // Exchange code for tokens (do this on your backend!)
       fetch('/api/auth/exchange', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: result.code,
-          codeVerifier: result.codeVerifier,
-        }),
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          window.location.href = '/dashboard.html';
-        } else {
-          alert('Authentication failed: ' + data.error);
-        }
-      })
-      .catch(error => {
-        alert('Error: ' + error.message);
+        body: JSON.stringify({ code: result.code, codeVerifier: result.codeVerifier }),
       });
-    } else {
-      alert('Invalid callback');
     }
-  </script>
-</body>
-</html>
+  }, []);
+
+  return <div>Authenticating...</div>;
+}
 ```
 
 ---
 
-### 3. Express.js Backend Integration
+### For AI Agents (TypeScript)
 
 ```typescript
-import express from 'express';
-import { createAuthAgentServerSDK } from './sdk/server/auth-agent-server-sdk';
+import { AuthAgentSDK } from 'auth-agent-sdk/agent';
 
-const app = express();
-app.use(express.json());
-
-const authSDK = createAuthAgentServerSDK({
-  authServerUrl: 'http://localhost:3000',
-  clientId: process.env.AUTH_AGENT_CLIENT_ID!,
-  clientSecret: process.env.AUTH_AGENT_CLIENT_SECRET!,
+const sdk = new AuthAgentSDK({
+  agentId: process.env.AGENT_ID!,
+  agentSecret: process.env.AGENT_SECRET!,
+  model: 'gpt-4',
 });
 
-// Token exchange endpoint
-app.post('/api/auth/exchange', async (req, res) => {
-  const { code, codeVerifier } = req.body;
+// When your agent encounters an Auth Agent login page
+const authorizationUrl = 'https://api.auth-agent.com/authorize?...';
 
-  try {
-    const tokens = await authSDK.exchangeCode(
-      code,
-      codeVerifier,
-      process.env.AUTH_AGENT_REDIRECT_URI!
-    );
+// Automatically authenticate
+const result = await sdk.completeAuthenticationFlow(authorizationUrl);
 
-    // Store tokens in session
-    req.session.accessToken = tokens.access_token;
-    req.session.refreshToken = tokens.refresh_token;
-
-    res.json({ success: true });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-});
-
-// Protected route example
-app.get('/api/user/profile', authSDK.createAuthMiddleware(), (req, res) => {
-  // req.user is populated by the middleware
-  res.json({
-    agentId: req.user.sub,
-    model: req.user.model,
-    scope: req.user.scope,
-  });
-});
-
-// Refresh token endpoint
-app.post('/api/auth/refresh', async (req, res) => {
-  const { refreshToken } = req.body;
-
-  try {
-    const tokens = await authSDK.refreshToken(refreshToken);
-
-    req.session.accessToken = tokens.access_token;
-
-    res.json({ success: true, accessToken: tokens.access_token });
-  } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
-  }
-});
-
-// Logout endpoint
-app.post('/api/auth/logout', async (req, res) => {
-  const { accessToken } = req.session;
-
-  try {
-    await authSDK.revokeToken(accessToken, 'access_token');
-    req.session.destroy();
-    res.json({ success: true });
-  } catch (error) {
-    res.json({ success: true }); // Always succeed logout
-  }
-});
-
-app.listen(3000, () => {
-  console.log('Server running on port 3000');
-});
-```
-
----
-
-## Environment Variables
-
-Create a `.env` file in your project:
-
-```env
-# Auth Agent Configuration
-AUTH_AGENT_SERVER_URL=http://localhost:3000
-AUTH_AGENT_CLIENT_ID=your_client_id
-AUTH_AGENT_CLIENT_SECRET=your_client_secret
-AUTH_AGENT_REDIRECT_URI=https://yoursite.com/callback
+console.log('Authorization code:', result.code);
+// Use this code to complete the OAuth flow
 ```
 
 ---
 
 ## API Reference
 
-### Client SDK
+### For Websites
 
-#### `createAuthAgentClient(config)`
+#### `AuthAgentClient`
 
-Create a new Auth Agent client instance.
+Client-side SDK for OAuth flow.
 
-**Parameters:**
-- `authServerUrl` - URL of Auth Agent server
-- `clientId` - Your OAuth client ID
-- `redirectUri` - Your callback URL
-- `scope` - Optional scopes (default: "openid profile")
-
-**Methods:**
-- `signIn()` - Start OAuth flow (redirects)
-- `handleCallback()` - Process callback, returns `{ code, state, codeVerifier }`
-- `exchangeCodeForToken(code, codeVerifier, clientSecret)` - Exchange code (should be done on backend)
-
-### Server SDK
-
-#### `createAuthAgentServerSDK(config)`
-
-Create a new server SDK instance.
-
-**Parameters:**
-- `authServerUrl` - URL of Auth Agent server
-- `clientId` - Your OAuth client ID
-- `clientSecret` - Your OAuth client secret
-
-**Methods:**
-- `exchangeCode(code, codeVerifier, redirectUri)` - Exchange authorization code
-- `refreshToken(refreshToken)` - Refresh access token
-- `introspectToken(token, tokenTypeHint?)` - Validate token
-- `revokeToken(token, tokenTypeHint?)` - Revoke token
-- `validateToken(accessToken)` - Check if token is valid
-- `getUserInfo(accessToken)` - Get user info from token
-- `createAuthMiddleware()` - Express middleware for protecting routes
-
----
-
-## Button Customization
-
-### React Button Themes
-
-```tsx
-// Default theme (gradient)
-<AuthAgentButton {...config} />
-
-// Minimal theme (outline)
-<AuthAgentButtonMinimal {...config} />
-
-// Custom styling
-<AuthAgentButton
-  {...config}
-  style={{
-    background: 'black',
-    color: 'white',
-    borderRadius: '4px',
-  }}
->
-  Custom Text
-</AuthAgentButton>
-```
-
-### Vanilla JS Button Themes
-
-```javascript
-AuthAgentButton.render({
-  ...config,
-  theme: 'default', // or 'minimal'
-  text: 'Custom Button Text',
-});
-```
-
----
-
-## Deployment Checklist
-
-Before deploying to production:
-
-- [ ] Use HTTPS everywhere (both auth server and your website)
-- [ ] Store `client_secret` securely (environment variables, secret manager)
-- [ ] Never expose `client_secret` to the frontend
-- [ ] Register production redirect URIs in Auth Agent
-- [ ] Implement proper session management
-- [ ] Add CORS configuration if needed
-- [ ] Set up token refresh logic
-- [ ] Implement logout functionality
-- [ ] Test the full flow end-to-end
-
----
-
-## Troubleshooting
-
-### "State mismatch" error
-- Cookies are blocked or cleared during redirect
-- Check browser privacy settings
-
-### "Redirect URI mismatch"
-- Ensure redirect URI is registered in Auth Agent
-- URI must match exactly (including trailing slash)
-
-### "Invalid client"
-- Check client_id and client_secret
-- Ensure credentials are correct
-
-### Token exchange fails
-- Verify you're using the correct code_verifier
-- Code can only be used once
-- Code expires after 10 minutes
-
----
-
-## Next Steps
-
-1. Register your client: See [Admin API docs](../README.md#admin-endpoints)
-2. Deploy Auth Agent server
-3. Configure your environment variables
-4. Test with AI agents!
-
----
-
-## AI Agent Integration
-
-If you're building an AI agent that needs to authenticate with Auth Agent, use the **AI Agent SDK**:
-
-- **TypeScript/JavaScript**: See [`sdk/agent/README.md`](./agent/README.md)
-- **Python**: See [`sdk/agent/README.md`](./agent/README.md)
-
-The agent SDK helps agents:
-- Extract `request_id` from authorization pages
-- Authenticate with the Auth Agent server
-- Poll for authentication completion
-
-Example:
 ```typescript
-import { AuthAgentAgentSDK } from './sdk/agent/auth-agent-agent-sdk';
+import { AuthAgentClient } from 'auth-agent-sdk/client';
 
-const sdk = new AuthAgentAgentSDK({
-  agentId: 'agent_xxx',
-  agentSecret: 'secret_xxx',
-  model: 'gpt-4',
+const client = new AuthAgentClient({
+  clientId: 'your_client_id',
+  redirectUri: 'https://yoursite.com/callback',
+  authServerUrl: 'https://api.auth-agent.com', // optional
 });
 
-const status = await sdk.completeAuthenticationFlow(authorizationUrl);
-console.log('Authorization code:', status.code);
+// Start OAuth flow (redirects user)
+client.signIn();
+
+// Handle callback (call this on your callback page)
+const result = client.handleCallback();
+// Returns: { code: string, state: string, codeVerifier: string } | null
 ```
 
-**Note:** The SDK automatically extracts the auth server URL from the authorization URL, so you don't need to provide it separately.
+#### `AuthAgentButton` (React)
+
+Pre-built React component.
+
+```typescript
+import { AuthAgentButton } from 'auth-agent-sdk/client/react';
+
+<AuthAgentButton
+  clientId="your_client_id"
+  redirectUri="https://yoursite.com/callback"
+  authServerUrl="https://api.auth-agent.com" // optional
+  text="Sign in with Auth Agent" // optional
+  className="custom-class" // optional
+  onSignInStart={() => console.log('Starting...')}
+  onSuccess={(result) => console.log('Success!', result)}
+  onError={(error) => console.error('Error:', error)}
+/>
+```
+
+**Props:**
+- `clientId` - Your OAuth client ID (**required**)
+- `redirectUri` - Callback URL (**required**)
+- `authServerUrl` - Auth Agent server URL (default: `https://api.auth-agent.com`)
+- `text` - Button text (default: "Sign in with Auth Agent")
+- `className` - Custom CSS class
+- `onSignInStart` - Called when sign-in starts
+- `onSuccess` - Called after successful callback
+- `onError` - Called on error
+
+---
+
+### For AI Agents
+
+#### `AuthAgentSDK`
+
+SDK for AI agents to authenticate programmatically.
+
+```typescript
+import { AuthAgentSDK } from 'auth-agent-sdk/agent';
+
+const sdk = new AuthAgentSDK({
+  agentId: 'agent_xxx',
+  agentSecret: 'ags_xxx',
+  model: 'gpt-4', // or 'claude-3.5-sonnet', etc.
+  authServerUrl: 'https://api.auth-agent.com', // optional
+});
+```
+
+**Methods:**
+
+##### `extractRequestId(authorizationUrl: string): Promise<string>`
+
+Extract the request ID from an authorization page.
+
+```typescript
+const requestId = await sdk.extractRequestId(authorizationUrl);
+```
+
+##### `authenticate(requestId: string, authorizationUrl: string): Promise<void>`
+
+Authenticate with the Auth Agent server.
+
+```typescript
+await sdk.authenticate(requestId, authorizationUrl);
+```
+
+##### `checkStatus(requestId: string, authorizationUrl: string): Promise<AuthStatus>`
+
+Check authentication status.
+
+```typescript
+const status = await sdk.checkStatus(requestId, authorizationUrl);
+// Returns: { status: 'authenticated' | 'pending', code?: string, state?: string }
+```
+
+##### `completeAuthenticationFlow(authorizationUrl: string): Promise<AuthResult>`
+
+Complete the entire flow (extract → authenticate → poll).
+
+```typescript
+const result = await sdk.completeAuthenticationFlow(authorizationUrl);
+// Returns: { code: string, state: string, redirect_uri: string }
+```
+
+---
+
+## Environment Variables
+
+```env
+# For websites
+NEXT_PUBLIC_AUTH_AGENT_CLIENT_ID=your_client_id
+AUTH_AGENT_CLIENT_SECRET=your_client_secret
+AUTH_AGENT_REDIRECT_URI=https://yoursite.com/callback
+
+# For agents
+AGENT_ID=agent_xxx
+AGENT_SECRET=ags_xxx
+AGENT_MODEL=gpt-4
+```
+
+---
+
+## Examples
+
+### Next.js App Router Example
+
+```typescript
+// app/login/page.tsx
+import { AuthAgentButton } from 'auth-agent-sdk/client/react';
+
+export default function LoginPage() {
+  return (
+    <div>
+      <h1>Welcome</h1>
+      <AuthAgentButton
+        clientId={process.env.NEXT_PUBLIC_AUTH_AGENT_CLIENT_ID!}
+        redirectUri={`${process.env.NEXT_PUBLIC_URL}/auth/callback`}
+      />
+    </div>
+  );
+}
+```
+
+```typescript
+// app/auth/callback/page.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { AuthAgentClient } from 'auth-agent-sdk/client';
+
+export default function CallbackPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    async function handleCallback() {
+      const client = new AuthAgentClient({
+        clientId: process.env.NEXT_PUBLIC_AUTH_AGENT_CLIENT_ID!,
+        redirectUri: `${window.location.origin}/auth/callback`,
+      });
+
+      const result = client.handleCallback();
+      if (!result) return;
+
+      // Exchange code on backend
+      const response = await fetch('/api/auth/exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: result.code,
+          codeVerifier: result.codeVerifier,
+        }),
+      });
+
+      if (response.ok) {
+        router.push('/dashboard');
+      }
+    }
+
+    handleCallback();
+  }, [router]);
+
+  return <div>Processing authentication...</div>;
+}
+```
+
+```typescript
+// app/api/auth/exchange/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const { code, codeVerifier } = await request.json();
+
+  // Exchange code for tokens
+  const response = await fetch('https://api.auth-agent.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: codeVerifier,
+      client_id: process.env.AUTH_AGENT_CLIENT_ID,
+      client_secret: process.env.AUTH_AGENT_CLIENT_SECRET,
+      redirect_uri: `${process.env.NEXT_PUBLIC_URL}/auth/callback`,
+    }),
+  });
+
+  const tokens = await response.json();
+
+  // Store tokens in session/database
+  // ... your session management logic
+
+  return NextResponse.json({ success: true });
+}
+```
+
+### AI Agent Example (TypeScript)
+
+```typescript
+import { AuthAgentSDK } from 'auth-agent-sdk/agent';
+
+async function authenticateAgent() {
+  const sdk = new AuthAgentSDK({
+    agentId: process.env.AGENT_ID!,
+    agentSecret: process.env.AGENT_SECRET!,
+    model: 'gpt-4',
+  });
+
+  // Your agent navigates to a website that uses Auth Agent
+  const authorizationUrl = 'https://example.com/login?...';
+
+  try {
+    const result = await sdk.completeAuthenticationFlow(authorizationUrl);
+
+    console.log('Authenticated successfully!');
+    console.log('Authorization code:', result.code);
+
+    // The website will redirect with this code
+    // and exchange it for access tokens
+  } catch (error) {
+    console.error('Authentication failed:', error);
+  }
+}
+```
+
+---
+
+## Security Best Practices
+
+### For Websites
+
+✅ **DO:**
+- Store `client_secret` server-side only
+- Use HTTPS in production
+- Validate `state` parameter to prevent CSRF
+- Implement PKCE (handled automatically by SDK)
+- Store tokens securely (HTTPOnly cookies recommended)
+
+❌ **DON'T:**
+- Expose `client_secret` to the frontend
+- Store access tokens in localStorage (vulnerable to XSS)
+- Skip PKCE validation
+- Use HTTP in production
+
+### For Agents
+
+✅ **DO:**
+- Store credentials in environment variables
+- Never log `agent_secret`
+- Use HTTPS for all API calls
+- Verify SSL certificates
+
+❌ **DON'T:**
+- Hardcode credentials in code
+- Commit `.env` files to version control
+- Disable SSL verification
+
+---
+
+## TypeScript Support
+
+This package is written in TypeScript and includes full type definitions.
+
+```typescript
+import type {
+  AuthAgentClient,
+  AuthAgentSDK,
+  AuthResult,
+  AuthStatus,
+  OAuthTokens,
+} from 'auth-agent-sdk';
+```
+
+---
+
+## Browser Support
+
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+- Modern mobile browsers
+
+---
+
+## Getting Credentials
+
+To use Auth Agent, you need to register:
+
+1. **For Websites**: Register an OAuth client
+2. **For Agents**: Register an agent
+
+**Coming Soon:** Visit [console.auth-agent.com](https://console.auth-agent.com) to self-register!
+
+For now, please contact us or see the [documentation](https://docs.auth-agent.com).
+
+---
+
+## Documentation
+
+- [Full Documentation](https://docs.auth-agent.com)
+- [Integration Guides](https://docs.auth-agent.com/guides/integration-scenarios)
+- [API Reference](https://docs.auth-agent.com/api-reference)
+- [Security Guide](https://docs.auth-agent.com/guides/security)
+
+---
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/auth-agent/auth-agent/issues)
+- **Documentation**: [docs.auth-agent.com](https://docs.auth-agent.com)
+- **Community**: [Discord](https://discord.gg/auth-agent)
+
+---
+
+## License
+
+MIT © Auth Agent Team
+
+---
+
+## Related Packages
+
+- **Python SDK**: [`pip install auth-agent-sdk`](https://pypi.org/project/auth-agent-sdk/)
+- **Browser-use Integration**: See Python SDK for browser automation example
+
+---
+
+## Changelog
+
+### 1.0.0 (2025-01-07)
+
+- Initial release
+- Website SDK with React components
+- Agent SDK for programmatic authentication
+- Full TypeScript support
+- PKCE implementation
+- OAuth 2.1 compliant

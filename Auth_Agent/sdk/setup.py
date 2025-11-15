@@ -12,8 +12,8 @@ long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists
 
 setup(
     name="auth-agent-sdk",
-    version="1.0.0",
-    description="Official SDK for Auth Agent - OAuth 2.1 for websites and AI agents",
+    version="2.5.0",
+    description="Official Python SDK for Auth Agent - OAuth 2.1 authentication for websites and AI agents. Includes client SDK for Python backends (Flask/FastAPI) and agent SDK for browser automation with browser-use integration.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Auth Agent Team",
