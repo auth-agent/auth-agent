@@ -1,0 +1,76 @@
+{
+  "name": "auth-agent-sdk",
+  "version": "1.0.0",
+  "description": "Official SDK for Auth Agent - OAuth 2.1 for websites and AI agents",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client.mjs",
+      "require": "./dist/client.js",
+      "types": "./dist/client.d.ts"
+    },
+    "./client/react": {
+      "import": "./dist/client-react.mjs",
+      "require": "./dist/client-react.js",
+      "types": "./dist/client-react.d.ts"
+    },
+    "./agent": {
+      "import": "./dist/agent.mjs",
+      "require": "./dist/agent.js",
+      "types": "./dist/agent.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "auth",
+    "oauth",
+    "oauth2",
+    "authentication",
+    "ai-agent",
+    "pkce",
+    "oidc",
+    "auth-agent"
+  ],
+  "author": "Auth Agent Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/auth-agent/auth-agent.git",
+    "directory": "Auth_Agent/sdk"
+  },
+  "homepage": "https://docs.auth-agent.com",
+  "bugs": {
+    "url": "https://github.com/auth-agent/auth-agent/issues"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "react": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {}
+}
