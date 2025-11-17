@@ -4,6 +4,10 @@
 
 # Auth Agent - OIDC + OAuth 2.1 for AI Agents
 
+🌐 **[Visit Website →](https://auth-agent.com/)**
+
+![OAuth 2.1 Authentication for Web Agents](./logo/frontpage.png)
+
 **Standardized authentication for web agents and computer using agents**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

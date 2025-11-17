@@ -178,6 +178,14 @@ app.post('/token', async (c) => {
         }, 400);
       }
 
+      // Verify client_id matches
+      if (authCode.client_id !== client_id) {
+        return c.json({
+          error: 'invalid_grant',
+          error_description: 'Authorization code was issued to a different client',
+        }, 400);
+      }
+
       // Verify PKCE
       const pkceValid = await crypto.validatePKCE(code_verifier, authCode.code_challenge, 'S256');
       if (!pkceValid) {

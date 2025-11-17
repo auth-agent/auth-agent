@@ -3,6 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Disable Cloudflare bot protection for OAuth endpoints
+[env.production]
+routes = [
+  { pattern = "api.auth-agent.com/*", zone_name = "auth-agent.com" }
+]
+
 [vars]
 JWT_ISSUER = "https://api.auth-agent.com"
 
