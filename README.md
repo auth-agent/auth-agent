@@ -494,7 +494,9 @@ export async function GET(request: Request) {
 }
 ```
 
-**See full example:** [`Auth_Agent/website`](./Auth_Agent/website) (Profilio integration example)
+**See full examples:**
+- **[Profilio](./Auth_Agent/Profilio)** - Production website with Contextual Profile scenario (user matching, profile linking)
+- **[website-integration-example](./website-integration-example)** - Basic integration example
 
 ---
 
@@ -750,25 +752,44 @@ Auth_Agent_YC/
 │   │   ├── create-agent-credentials.js
 │   │   └── create-*-client.js/py
 │   └── demo/               # Video demonstrations
-├── website-integration-example/  # Website integration example
+├── Auth_Agent/
+│   └── Profilio/                # Production example - Contextual Profile scenario
+│       └── src/                 # Next.js app with user matching
+├── website-integration-example/  # Basic website integration example
 │   └── src/                     # Next.js app with Auth Agent integration
 ├── logo/                    # Branding assets
 └── README.md                # This file
 ```
 
-## 🌟 Website Integration Example
+## 🌟 Website Integration Examples
 
-A fully integrated Next.js website showcasing Auth Agent authentication:
+### Profilio - Production Example
 
-Includes:
+**Profilio** is a production-ready Next.js website demonstrating Auth Agent with the **Contextual Profile** scenario:
+
+- ✅ Complete OAuth 2.1 flow with PKCE
+- ✅ User email matching via `/userinfo` endpoint
+- ✅ Agent profiles linked to user accounts
+- ✅ Dashboard showing user context when agent is linked
+- ✅ Next.js 15 with App Router
+- ✅ Supabase backend integration
+- ✅ Full TypeScript implementation
+
+**View the example:** [`Auth_Agent/Profilio`](./Auth_Agent/Profilio)
+
+**Live demo:** [Profilio](https://profilio-z561-het-s-projects-30bce613.vercel.app)
+
+### Basic Integration Example
+
+A simpler Next.js example for getting started:
+
 - ✅ Auth Agent OAuth 2.1 sign-in button
 - ✅ Callback handler for OAuth redirect
 - ✅ Token exchange API route
 - ✅ Session storage with httpOnly cookies
 - ✅ Protected dashboard routes
-- ✅ Supabase integration for user data
 
-See [website-integration-example/README.md](./website-integration-example/README.md) for setup instructions.
+**View the example:** [`website-integration-example`](./website-integration-example)
 
 ## 🤝 Contributing
 
