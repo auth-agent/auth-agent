@@ -376,11 +376,13 @@ cd Auth_Agent/examples/browser-use-integration
 
 #### 2. Get Your Agent Credentials
 
-**🔴 TODO:** We're building a self-service console website where you can register and get credentials instantly!
+Visit the [Auth Agent Console](https://auth-agent.com/console/agent) to create and manage your agent credentials:
 
-**Coming Soon:** `console.auth-agent.com` - Sign up, create agents, manage credentials
+1. **Sign up** with Google, GitHub, or Email
+2. **Create an agent** to get your `agent_id` and `agent_secret`
+3. **Copy credentials** to your `.env` file
 
-**For now, please contact us** to get agent credentials. Admin endpoints are restricted for security.
+**Console:** [https://auth-agent.com/console/agent](https://auth-agent.com/console/agent)
 
 #### 3. Authenticate on Any Website
 
@@ -418,11 +420,14 @@ Add "Sign in with Auth Agent" button to your website in 3 steps:
 
 #### 1. Get OAuth Client Credentials
 
-**🔴 TODO:** We're building a self-service console website where you can register and get credentials instantly!
+Visit the [Auth Agent Console](https://auth-agent.com/console/website) to register your OAuth client:
 
-**Coming Soon:** `console.auth-agent.com` - Sign up, register clients, configure redirect URIs
+1. **Sign up** with Google, GitHub, or Email
+2. **Register a new client** with your website details
+3. **Add redirect URIs** (e.g., `https://yourwebsite.com/api/auth/callback`)
+4. **Copy your `client_id` and `client_secret`** to your environment variables
 
-**For now, please contact us** to get OAuth client credentials. Admin endpoints are restricted for security.
+**Console:** [https://auth-agent.com/console/website](https://auth-agent.com/console/website)
 
 #### 2. Add the Auth Agent Button
 
@@ -500,9 +505,9 @@ export async function GET(request: Request) {
 
 ---
 
-## 📋 TODO: Self-Service Console Website
+## 🎛️ Auth Agent Console
 
-We're actively building a user-friendly console where both AI agent developers and website owners can self-register:
+Our self-service console is now live! Both AI agent developers and website owners can register and manage their credentials:
 
 ### For Agent Developers:
 - ✅ Sign up with Google/GitHub/Email
@@ -511,6 +516,8 @@ We're actively building a user-friendly console where both AI agent developers a
 - ✅ Regenerate secrets
 - ✅ Test authentication flows
 
+**Get started:** [https://auth-agent.com/console/agent](https://auth-agent.com/console/agent)
+
 ### For Website Owners:
 - ✅ Sign up with Google/GitHub/Email
 - ✅ Register OAuth clients
@@ -518,9 +525,7 @@ We're actively building a user-friendly console where both AI agent developers a
 - ✅ View authentication logs
 - ✅ Manage API keys
 
-**Coming Soon:** Visit `console.auth-agent.com` to get started!
-
-**Current Status:** Authentication system complete, building dashboards now.
+**Get started:** [https://auth-agent.com/console/website](https://auth-agent.com/console/website)
 
 ## 📚 Documentation
 
@@ -801,10 +806,12 @@ MIT
 
 ## 🔗 Links
 
+- **Website**: https://auth-agent.com
+- **Documentation**: https://docs.auth-agent.com
+- **Agent Console**: https://auth-agent.com/console/agent
+- **Website Console**: https://auth-agent.com/console/website
 - **Repository**: https://github.com/auth-agent/auth-agent
 - **Live API**: https://api.auth-agent.com
-- **Cloudflare Dashboard**: https://dash.cloudflare.com
-- **Supabase Dashboard**: https://supabase.com/dashboard
 
 ---
 
