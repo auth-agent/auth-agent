@@ -9,7 +9,17 @@ export interface Agent {
   agent_id: string;
   agent_secret_hash: string;
   user_email: string;
-  user_name: string;
+  user_name: string | null; // Optional: websites only need email for matching
+  user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
   created_at: string;
   updated_at: string;
 }
@@ -92,7 +102,7 @@ export async function createAgent(
   agentId: string,
   agentSecretHash: string,
   userEmail: string,
-  userName: string
+  userName: string | null // Optional: websites only need email for matching
 ): Promise<Agent> {
   const { data, error } = await db
     .from('agents')
@@ -100,7 +110,7 @@ export async function createAgent(
       agent_id: agentId,
       agent_secret_hash: agentSecretHash,
       user_email: userEmail,
-      user_name: userName,
+      user_name: userName || null, // Ensure empty strings become null
     })
     .select()
     .single();
@@ -114,6 +124,19 @@ export async function listAgents(db: SupabaseClient): Promise<Agent[]> {
 
   if (error) throw new Error(`Failed to list agents: ${error.message}`);
   return data as Agent[];
+}
+
+// ==================== USER PROFILE OPERATIONS ====================
+
+export async function getUserProfile(db: SupabaseClient, userId: string): Promise<UserProfile | null> {
+  const { data, error } = await db
+    .from('user_profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) return null;
+  return data as UserProfile;
 }
 
 // ==================== CLIENT OPERATIONS ====================

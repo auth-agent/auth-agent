@@ -377,10 +377,20 @@ app.get('/userinfo', async (c) => {
       sub: tokenRecord.agent_id,
     };
 
-    // Only return email and name if the email scope was granted
+    // Only return email if the email scope was granted
+    // IMPORTANT: agent.user_email is the SINGLE SOURCE OF TRUTH for this agent's email.
+    // - Default: Set to authenticated user's email when agent is created (onboarding email)
+    // - Update: If user updates email in console, agent.user_email is updated in database
+    // - Website: This exact value (agent.user_email) is what websites receive via /userinfo
+    // - Matching: Websites use this email to match the agent to the user's account
+    // - Per-Agent: Each agent can have a different email if the user wants
+    // Name is optional and only returned if it exists (websites only need email for matching).
     if (hasEmailScope) {
       response.email = agent.user_email;
-      response.name = agent.user_name;
+      // Only include name if it exists (it's optional)
+      if (agent.user_name && agent.user_name.trim()) {
+        response.name = agent.user_name;
+      }
     }
 
     return c.json(response);
@@ -541,16 +551,19 @@ app.get('/api/check-status', async (c) => {
 /**
  * POST /api/admin/agents
  * Create a new agent
+ * 
+ * @deprecated This endpoint is deprecated. Agents should be created through the authenticated console at https://auth-agent.com/console/agent
+ * This endpoint may be removed in a future version.
  */
 app.post('/api/admin/agents', async (c) => {
   try {
     const body = await c.req.json();
     const { user_email, user_name, agent_id } = body;
 
-    if (!user_email || !user_name || !agent_id) {
+    if (!user_email || !agent_id) {
       return c.json({
         error: 'invalid_request',
-        error_description: 'Missing required fields',
+        error_description: 'Missing required fields: user_email and agent_id',
       }, 400);
     }
 
@@ -570,6 +583,7 @@ app.post('/api/admin/agents', async (c) => {
       user_name,
       created_at: agent.created_at,
       warning: 'Save the agent_secret securely. It will not be shown again.',
+      deprecation_notice: 'This endpoint is deprecated. Please use the authenticated console at https://auth-agent.com/console/agent to create agents.',
     }, 201);
   } catch (error: any) {
     console.error('Create agent error:', error);

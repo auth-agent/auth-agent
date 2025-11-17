@@ -1,0 +1,16 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="black"/>
+    <mask id="link-mask">
+        <rect width="100" height="100" fill="white"/>
+        <g stroke="black" stroke-width="7" stroke-linecap="round" fill="black">
+            <!-- The link icon shape that will become the "gap" -->
+            <path d="M54 44 C49.5 44 49.5 28 54 28"/>
+            <path d="M72 28 C76.5 28 76.5 44 72 44"/>
+            <line x1="49.5" y1="36" x2="76.5" y2="36"/>
+        </g>
+    </mask>
+
+    <text x="12" y="82" font-family="Arial, Helvetica, sans-serif" font-size="100" font-weight="bold" fill="white" mask="url(#link-mask)">
+      P
+    </text>
+</svg>

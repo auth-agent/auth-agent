@@ -21,24 +21,11 @@ Usage:
     )
 """
 
-import os
-import sys
 import logging
 from typing import Optional
 
-# Add the Auth Agent SDK to the path
-# SDK is in Auth_Agent/sdk/agent/ relative to examples/browser-use-integration/
-sdk_path = os.path.join(os.path.dirname(__file__), '..', '..', 'sdk', 'agent')
-if os.path.exists(sdk_path):
-    sys.path.insert(0, sdk_path)
-
-try:
-    from auth_agent_agent_sdk import AuthAgentAgentSDK
-except ImportError:
-    raise ImportError(
-        f'Could not find Auth Agent SDK at {sdk_path}. '
-        'Make sure the SDK file exists at Auth_Agent/sdk/agent/auth_agent_agent_sdk.py'
-    )
+# Import from the package
+from .auth_agent_agent_sdk import AuthAgentSDK
 
 # Import Tools/Controller - try multiple methods for compatibility
 try:
@@ -93,7 +80,7 @@ class AuthAgentTools(Tools):
             )
         
         # Initialize SDK
-        self.sdk = AuthAgentAgentSDK(
+        self.sdk = AuthAgentSDK(
             agent_id=self.agent_id,
             agent_secret=self.agent_secret,
             model=self.model,

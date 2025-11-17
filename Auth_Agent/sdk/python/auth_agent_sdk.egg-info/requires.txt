@@ -1,11 +1,9 @@
 aiohttp>=3.8.0
+browser-use>=0.1.0
+playwright>=1.40.0
 
 [:python_version < "3.11"]
 typing-extensions>=4.0.0
-
-[browser-use]
-browser-use>=0.1.0
-playwright>=1.40.0
 
 [dev]
 pytest>=7.0.0

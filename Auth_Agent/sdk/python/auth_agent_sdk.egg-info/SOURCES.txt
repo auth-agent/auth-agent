@@ -17,3 +17,10 @@ python/auth_agent_sdk/common/__init__.py
 python/auth_agent_sdk/common/errors.py
 python/auth_agent_sdk/common/retry.py
 python/auth_agent_sdk/common/validation.py
+python/tests/__init__.py
+python/tests/conftest.py
+python/tests/test_agent.py
+python/tests/test_client.py
+python/tests/test_errors.py
+python/tests/test_retry.py
+python/tests/test_validation.py

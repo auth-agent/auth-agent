@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: auth-agent-sdk
-Version: 2.5.0
+Version: 0.0.1
 Summary: Official Python SDK for Auth Agent - OAuth 2.1 authentication for websites and AI agents. Includes client SDK for Python backends (Flask/FastAPI) and agent SDK for browser automation with browser-use integration.
 Home-page: https://github.com/auth-agent/auth-agent
 Author: Auth Agent Team
@@ -26,9 +26,8 @@ Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 Requires-Dist: aiohttp>=3.8.0
 Requires-Dist: typing-extensions>=4.0.0; python_version < "3.11"
-Provides-Extra: browser-use
-Requires-Dist: browser-use>=0.1.0; extra == "browser-use"
-Requires-Dist: playwright>=1.40.0; extra == "browser-use"
+Requires-Dist: browser-use>=0.1.0
+Requires-Dist: playwright>=1.40.0
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"

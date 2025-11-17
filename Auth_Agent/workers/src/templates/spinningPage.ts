@@ -16,16 +16,39 @@ export function spinningPage(requestId: string, clientName: string, baseUrl: str
       box-sizing: border-box;
     }
 
+    html {
+      background: #000000;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #FF6B35 100%);
       background-size: 400% 400%;
+      background-attachment: fixed;
       animation: gradientShift 8s ease infinite;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      width: 100vw;
       color: #fff;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #FF6B35 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 8s ease infinite;
+      z-index: -1;
     }
 
     @keyframes gradientShift {
@@ -43,12 +66,27 @@ export function spinningPage(requestId: string, clientName: string, baseUrl: str
       box-shadow: 0 8px 32px rgba(255, 107, 53, 0.4);
     }
 
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      height: 70px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+
     .brand {
       font-size: 32px;
       font-weight: 700;
       color: #FF6B35;
       margin-bottom: 30px;
       letter-spacing: -0.5px;
+      display: none;
     }
 
     .spinner {
@@ -116,10 +154,41 @@ export function spinningPage(requestId: string, clientName: string, baseUrl: str
       60% { content: '..'; }
       80%, 100% { content: '...'; }
     }
+
+    .marketing-link {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 107, 53, 0.3);
+    }
+
+    .marketing-link a {
+      color: #FF6B35;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .marketing-link a:hover {
+      color: #ff8c5a;
+      text-decoration: underline;
+    }
+
+    .marketing-link .link-text {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 13px;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="logo-container">
+      <img src="https://auth-agent.com/logo/AA.png" alt="Auth Agent" class="logo" onerror="this.onerror=null; this.style.display='none'; if(document.querySelector('.brand')) document.querySelector('.brand').style.display='block';">
+    </div>
     <div class="brand">Auth-Agent</div>
     <div class="spinner"></div>
     <h1>Authenticating AI Agent</h1>
@@ -135,6 +204,13 @@ export function spinningPage(requestId: string, clientName: string, baseUrl: str
 
     <div class="status">
       <span>Waiting for agent authentication</span><span class="dots"></span>
+    </div>
+
+    <div class="marketing-link">
+      <a href="https://auth-agent.com" target="_blank" rel="noopener noreferrer">
+        Learn more about Auth Agent →
+      </a>
+      <div class="link-text">Get credentials for your AI agents or integrate Auth Agent into your website</div>
     </div>
   </div>
 

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://profilio.online/sitemap.xml
+ 
+# Allow all crawlers to access the site
+# Block any sensitive areas if needed in the future
+# Disallow: /api/
+# Disallow: /dashboard/ 

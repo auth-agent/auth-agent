@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS agents (
     agent_id TEXT UNIQUE NOT NULL,
     agent_secret_hash TEXT NOT NULL,
     user_email TEXT NOT NULL,
-    user_name TEXT NOT NULL,
+    user_name TEXT, -- Optional: websites only need email for matching
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -16,14 +16,44 @@ export function errorPage(errorCode: string, message: string): string {
       box-sizing: border-box;
     }
 
+    html {
+      background: #000000;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #cc0000 100%);
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #FF6B35 100%);
+      background-size: 400% 400%;
+      background-attachment: fixed;
+      animation: gradientShift 8s ease infinite;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      width: 100vw;
       color: #fff;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #FF6B35 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 8s ease infinite;
+      z-index: -1;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
     }
 
     .container {
@@ -31,9 +61,9 @@ export function errorPage(errorCode: string, message: string): string {
       max-width: 500px;
       padding: 40px;
       background: rgba(0, 0, 0, 0.7);
-      border: 2px solid #cc0000;
+      border: 2px solid #FF6B35;
       border-radius: 20px;
-      box-shadow: 0 8px 32px rgba(204, 0, 0, 0.4);
+      box-shadow: 0 8px 32px rgba(255, 107, 53, 0.4);
     }
 
     .brand {
@@ -53,7 +83,7 @@ export function errorPage(errorCode: string, message: string): string {
       font-size: 28px;
       margin-bottom: 15px;
       font-weight: 600;
-      color: #cc0000;
+      color: #FF6B35;
     }
 
     .error-code {
@@ -82,7 +112,7 @@ export function errorPage(errorCode: string, message: string): string {
     }
 
     .button:hover {
-      background: #ff5522;
+      background: #ff8c5a;
     }
   </style>
 </head>
@@ -93,7 +123,7 @@ export function errorPage(errorCode: string, message: string): string {
     <h1>Authentication Error</h1>
     <div class="error-code">Error: ${escapeHtml(errorCode)}</div>
     <p>${escapedMessage}</p>
-    <a href="https://github.com/auth-agent" class="button">Learn More</a>
+    <a href="https://auth-agent.com" class="button">Error</a>
   </div>
 </body>
 </html>`;

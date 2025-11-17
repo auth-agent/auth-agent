@@ -4,9 +4,9 @@ Auth Agent SDK for AI Agents (Python)
 This SDK helps AI agents authenticate with Auth Agent OAuth 2.1 server.
 
 Usage:
-    from auth_agent_agent_sdk import AuthAgentAgentSDK
+    from auth_agent_sdk.agent import AuthAgentSDK
 
-    sdk = AuthAgentAgentSDK(
+    sdk = AuthAgentSDK(
         agent_id='agent_xxx',
         agent_secret='secret_xxx',
         model='gpt-4'
@@ -40,7 +40,7 @@ from ..common.validation import validate_url
 from ..common.retry import retry_with_backoff, retry_with_backoff_async, RetryOptions
 
 
-class AuthAgentAgentSDK:
+class AuthAgentSDK:
     """SDK for AI agents to authenticate with Auth Agent OAuth 2.1 server."""
 
     def __init__(
@@ -643,7 +643,7 @@ def create_auth_agent_agent_sdk(
     agent_id: str,
     agent_secret: str,
     model: str
-) -> AuthAgentAgentSDK:
+) -> AuthAgentSDK:
     """Create a new Auth Agent SDK instance for AI agents."""
-    return AuthAgentAgentSDK(agent_id, agent_secret, model)
+    return AuthAgentSDK(agent_id, agent_secret, model)
 

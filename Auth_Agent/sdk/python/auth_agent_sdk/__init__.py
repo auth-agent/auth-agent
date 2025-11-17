@@ -6,7 +6,7 @@ This package provides SDKs for both websites and AI agents:
 - agent: SDK for AI agents to authenticate programmatically
 """
 
-__version__ = "2.5.0"
+__version__ = "0.0.2"
 __author__ = "Auth Agent Team"
 __license__ = "MIT"
 

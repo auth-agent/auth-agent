@@ -12,7 +12,7 @@ long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists
 
 setup(
     name="auth-agent-sdk",
-    version="2.5.0",
+    version="0.0.2",
     description="Official Python SDK for Auth Agent - OAuth 2.1 authentication for websites and AI agents. Includes client SDK for Python backends (Flask/FastAPI) and agent SDK for browser automation with browser-use integration.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -30,12 +30,10 @@ setup(
     install_requires=[
         "aiohttp>=3.8.0",
         "typing-extensions>=4.0.0; python_version<'3.11'",
+        "browser-use>=0.1.0",
+        "playwright>=1.40.0",
     ],
     extras_require={
-        "browser-use": [
-            "browser-use>=0.1.0",
-            "playwright>=1.40.0",
-        ],
         "dev": [
             "pytest>=7.0.0",
             "pytest-asyncio>=0.21.0",

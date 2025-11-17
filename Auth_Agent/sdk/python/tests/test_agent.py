@@ -4,13 +4,13 @@ Tests for Auth Agent Agent SDK
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from auth_agent_sdk.agent import AuthAgentAgentSDK
+from auth_agent_sdk.agent import AuthAgentSDK
 from auth_agent_sdk.common.errors import AuthAgentValidationError, AuthAgentSecurityError
 
 
 def test_agent_sdk_creation():
     """Test agent SDK creation."""
-    sdk = AuthAgentAgentSDK(
+    sdk = AuthAgentSDK(
         agent_id='agent_123',
         agent_secret='secret_123',
         model='gpt-4'
@@ -23,18 +23,18 @@ def test_agent_sdk_creation():
 def test_agent_sdk_reject_missing_fields():
     """Test rejection of missing required fields."""
     with pytest.raises(AuthAgentValidationError):
-        AuthAgentAgentSDK(agent_id='', agent_secret='secret', model='gpt-4')
+        AuthAgentSDK(agent_id='', agent_secret='secret', model='gpt-4')
     
     with pytest.raises(AuthAgentValidationError):
-        AuthAgentAgentSDK(agent_id='agent', agent_secret='', model='gpt-4')
+        AuthAgentSDK(agent_id='agent', agent_secret='', model='gpt-4')
     
     with pytest.raises(AuthAgentValidationError):
-        AuthAgentAgentSDK(agent_id='agent', agent_secret='secret', model='')
+        AuthAgentSDK(agent_id='agent', agent_secret='secret', model='')
 
 
 def test_extract_request_id_from_html():
     """Test extracting request_id from HTML."""
-    sdk = AuthAgentAgentSDK(
+    sdk = AuthAgentSDK(
         agent_id='agent_123',
         agent_secret='secret_123',
         model='gpt-4'
@@ -54,7 +54,7 @@ def test_extract_request_id_from_html():
 
 def test_extract_request_id_alternative_pattern():
     """Test extracting request_id from alternative pattern."""
-    sdk = AuthAgentAgentSDK(
+    sdk = AuthAgentSDK(
         agent_id='agent_123',
         agent_secret='secret_123',
         model='gpt-4'
@@ -67,7 +67,7 @@ def test_extract_request_id_alternative_pattern():
 
 def test_extract_request_id_not_found():
     """Test error when request_id not found."""
-    sdk = AuthAgentAgentSDK(
+    sdk = AuthAgentSDK(
         agent_id='agent_123',
         agent_secret='secret_123',
         model='gpt-4'
@@ -81,7 +81,7 @@ def test_extract_request_id_not_found():
 
 def test_extract_auth_server_url():
     """Test extracting auth server URL."""
-    sdk = AuthAgentAgentSDK(
+    sdk = AuthAgentSDK(
         agent_id='agent_123',
         agent_secret='secret_123',
         model='gpt-4'
@@ -94,7 +94,7 @@ def test_extract_auth_server_url():
 
 def test_extract_auth_server_url_reject_localhost():
     """Test rejection of localhost URLs."""
-    sdk = AuthAgentAgentSDK(
+    sdk = AuthAgentSDK(
         agent_id='agent_123',
         agent_secret='secret_123',
         model='gpt-4'
