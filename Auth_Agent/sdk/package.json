@@ -1,6 +1,6 @@
 {
   "name": "auth-agent-sdk",
-  "version": "2.5.0",
+  "version": "0.0.3",
   "description": "Official SDK for Auth Agent - OAuth 2.1 for websites and AI agents",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
