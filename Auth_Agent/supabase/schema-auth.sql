@@ -47,6 +47,11 @@ USING (auth.uid() = id);
 -- Enable RLS on agents table
 ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 
+-- Service role can do everything (bypasses RLS for API operations)
+-- This must come FIRST so service role queries work
+CREATE POLICY "Service role can do everything on agents" ON agents
+    FOR ALL USING (true);
+
 -- Users can view their own agents
 CREATE POLICY "Users can view own agents"
 ON agents FOR SELECT
@@ -80,6 +85,11 @@ USING (
 
 -- Enable RLS on clients table
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+
+-- Service role can do everything (bypasses RLS for API operations)
+-- This must come FIRST so service role queries work
+CREATE POLICY "Service role can do everything on clients" ON clients
+    FOR ALL USING (true);
 
 -- Users can view their own clients
 CREATE POLICY "Users can view own clients"
