@@ -531,13 +531,6 @@ Our self-service console is now live! Both AI agent developers and website owner
 
 **Get started:** [https://auth-agent.com/console/website](https://auth-agent.com/console/website)
 
-## 📚 Documentation
-
-- **[SDK Documentation](./sdk/README.md)** - Client and agent SDKs
-- **[Browser-Use Integration](./examples/browser-use-integration/README.md)** - AI agent authentication examples
-- **[Demo Websites](./websites/README.md)** - Three integrated demo websites
-- **[Hackathon Pitch Guide](./HACKATHON_PITCH.md)** - Presentation materials
-
 ## 🔌 API Endpoints
 
 ### Public OAuth Endpoints
