@@ -68,20 +68,39 @@ Get agent credentials and authenticate on any website that supports Auth Agent.
 
 **1.** Get credentials at [auth-agent.com/console/agent](https://auth-agent.com/console/agent)
 
-**2.** Add to your agent:
+**2.** Add to your browser-use agent:
 
 ```python
+import os
+import asyncio
+from dotenv import load_dotenv
 from auth_agent_authenticate import AuthAgentTools
+from browser_use import Agent, ChatBrowserUse
 
-tools = AuthAgentTools(
-    agent_id="agent_xxx",
-    agent_secret="as_xxx",
-    model="gpt-4"
-)
+load_dotenv()
 
-# When your agent sees "Sign in with Auth Agent", call:
-await tools.authenticate_with_auth_agent(request_id)
+async def main():
+    # Initialize Auth Agent tools
+    tools = AuthAgentTools(
+        agent_id=os.getenv('AGENT_ID'),
+        agent_secret=os.getenv('AGENT_SECRET'),
+        model='browser-use',
+    )
+    
+    task = (
+        "Go to https://example.com/login and click 'Sign in with Auth Agent'. "
+        "When the spinning authentication page appears, "
+        "use the authenticate_with_auth_agent tool to complete authentication. "
+        "Wait for redirect to the dashboard."
+    )
+    
+    agent = Agent(task=task, llm=ChatBrowserUse(), tools=tools)
+    await agent.run()
+
+asyncio.run(main())
 ```
+
+The `authenticate_with_auth_agent` tool automatically extracts the `request_id` from the page and authenticates.
 
 Full example: [`browser-use integration`](./Auth_Agent/examples/browser-use-integration)
 
@@ -160,7 +179,7 @@ sequenceDiagram
     Agent->>Website: Present access_token
     Website->>AuthAgent: GET /userinfo
     AuthAgent->>Website: { email: "user@example.com" }
-    
+
     Note over Website: Look up user by email
     
     alt Full Account
