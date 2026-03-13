@@ -17,6 +17,8 @@ Give your AI agents their own login.
 
 ---
 
+Note: I have removed the auth-agent.com deployment, but the project is still kept open source. 
+
 ## Add Auth Agent to Your Website in 2 Minutes
 
 Using [Better Auth](https://better-auth.com)? Three steps:
